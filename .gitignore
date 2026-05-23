@@ -1,0 +1,48 @@
+# Build e publicação
+bin/
+obj/
+publish/
+/.claude
+*.exe
+*.dll
+*.pdb
+*.suo
+*.user
+
+# Visual Studio
+.vs/
+*.vspscc
+*.vssscc
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Rider
+.idea/
+*.sln.iml
+
+# NuGet
+*.nupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+
+# Logs e temporários
+*.log
+*.tmp
+*.cache
+Thumbs.db
+Desktop.ini
+
+# Cobertura de testes
+coverage/
+*.coverage
+*.coveragexml
+
+# Publicação single-file — não versionar o .exe gerado
+**/bin/Release/
+**/bin/Debug/
+**/obj/Release/
+**/obj/Debug/
+

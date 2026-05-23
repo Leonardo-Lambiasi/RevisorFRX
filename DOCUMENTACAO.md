@@ -1,0 +1,322 @@
+# RevisorFRX — Documentação Técnica
+
+Como o projeto funciona internamente, como cada regra opera e como publicar.
+
+---
+
+## Arquitetura
+
+O projeto é dividido em duas camadas:
+
+```
+RevisorFRX.Core   →   Lógica pura. Sem dependência de UI, sem WinForms.
+RevisorFRX.App    →   Interface WinForms. Apenas chama o Core e exibe resultados.
+```
+
+Isso permite reutilizar o Core em outros contextos (CLI, testes, integração CI) sem
+arrastar dependências de interface.
+
+---
+
+## Fluxo de execução
+
+```
+Usuário clica "Analisar"
+       │
+       ▼
+MainForm.AnalyzeButton_Click
+       │  File.ReadAllText(path)
+       │  await Task.Run(...)     ← análise roda em background (não trava UI)
+       ▼
+FrxAnalyzer.Analyze(frxContent)
+       │  XDocument.Parse(frxContent)   ← parse do XML
+       │  foreach regra → Check(doc)
+       │  OrderBy(Severity)
+       ▼
+List<RuleResult>
+       │
+       ▼
+MainForm.PopulateGrid()   ← volta para o thread de UI após await
+MainForm.UpdateBadges()
+```
+
+---
+
+## Estrutura do arquivo .frx
+
+Um `.frx` é um XML com esta estrutura:
+
+```xml
+<Report>
+  <Dictionary>
+    <!-- Declara todas as fontes de dados -->
+    <BusinessObjectDataSource Name="Dados" ...>
+      <BusinessObjectDataSource Name="Apontamentos" ...>
+        <Column Name="DataDoProtocolo" DataType="System.DateTime"/>
+        <Column Name="Titulo" DataType="null">
+          <Column Name="ValorAProtestar" DataType="System.Decimal"/>
+        </Column>
+      </BusinessObjectDataSource>
+    </BusinessObjectDataSource>
+  </Dictionary>
+
+  <ReportPage Name="Page1">
+    <DataBand Name="Data1" DataSource="Apontamentos">
+      <TextObject Name="Text1"
+                  Text="[Dados.Apontamentos.DataDoProtocolo]"
+                  Format="Date"
+                  Format.Pattern="dd/MM/yyyy"
+                  BeforePrintEvent="FormatarData"/>
+    </DataBand>
+  </ReportPage>
+
+  <ScriptText><![CDATA[
+    private void FormatarData(object sender, EventArgs e) { ... }
+  ]]></ScriptText>
+</Report>
+```
+
+### Pontos-chave do formato
+
+| Conceito | Onde no XML | O que é |
+|----------|------------|---------|
+| Schema de dados | `<Dictionary>` | Todas as entidades e campos disponíveis |
+| Expressão de campo | `Text="[Dados.X.Y]"` | Referência a um campo do schema |
+| Evento | `BeforePrintEvent="Metodo"` | Nome do método no ScriptText |
+| Formatação | `Format="Currency"` | Tipo de formato a exibir |
+| Código C# | `<ScriptText>` | Bloco compilado em runtime pelo FastReport |
+| DataSource | `DataSource="Apontamentos"` | Nome do BODS que alimenta a banda |
+
+### Paths de campos vs. atributos Name/Alias
+
+Os caminhos nas expressões `[Dados.X.Y]` usam o **Alias** dos `BusinessObjectDataSource`
+(quando presente) e o **Name** das colunas (`Column`):
+
+```xml
+<!-- Alias="Apresentantes" → expressão usa [Dados.Apontamentos.Apresentantes.Nome] -->
+<BusinessObjectDataSource Name="BusinessObjectDataSource659"
+                          Alias="Apresentantes" ...>
+  <Column Name="Nome" DataType="System.String"/>
+</BusinessObjectDataSource>
+```
+
+O RevisorFRX constrói o schema interno priorizando `Alias` sobre `Name` para corresponder
+ao comportamento real do FastReport Designer.
+
+---
+
+## Como cada regra funciona
+
+### Ref-1 — MasterComponent inválido
+
+```
+1. Coleta todos os atributos Name de todos os elementos do doc → HashSet
+2. Varre elementos com atributo MasterComponent
+3. Se MasterComponent não está no HashSet → Erro
+```
+
+Exemplo de detecção:
+```xml
+<DataBand MasterComponent="DataBand99"/>
+<!-- "DataBand99" não existe no relatório → Ref-1 Error -->
+```
+
+---
+
+### Ref-2 — DataSource não declarado
+
+```
+1. Coleta todos os BusinessObjectDataSource/TableDataSource/CsvDataSource declarados
+2. Varre elementos com atributo DataSource
+   (ignora elementos dentro do Dictionary e os próprios tipos de fonte)
+3. Se DataSource não está nos declarados → Erro
+```
+
+Exemplo:
+```xml
+<DataBand DataSource="FonteQueNaoExiste"/>
+<!-- → Ref-2 Error -->
+```
+
+---
+
+### Ref-3 — Evento sem método no ScriptText
+
+```
+1. Parseia o ScriptText com Roslyn → extrai todos os nomes de métodos
+2. Varre todos os atributos que terminam em "Event" em qualquer elemento
+3. Se o valor do atributo não está nos métodos Roslyn → Erro
+```
+
+Funciona com qualquer evento: `BeforePrintEvent`, `AfterDataEvent`, etc.
+
+---
+
+### Ref-4 — PrintOnParent com hierarquia incorreta
+
+```
+1. Constrói mapa pai→filho dos BusinessObjectDataSource no Dictionary
+2. Para cada SubreportObject com PrintOnParent=true:
+   a. Encontra o DataSource da DataBand pai (sobe pelos Ancestors)
+   b. Encontra os DataSources de todas as DataBands na ReportPage filha
+   c. Para cada DataSource filho, verifica se é descendente do pai no mapa
+   d. Se não for → Erro
+   e. Se a ReportPage não existir → Erro
+```
+
+---
+
+### Layout-1 — CanGrow sem ShiftMode
+
+```
+1. Varre todos os elementos com CanGrow="true"
+2. Para cada um, pega os irmãos na mesma banda pai
+3. Se irmão tem Top maior (está abaixo) e não tem ShiftMode="Shift" → Aviso
+```
+
+Parse de `Top` usa `CultureInfo.InvariantCulture` para funcionar independente
+do locale do sistema.
+
+---
+
+### Code-1 — catch vazio (Roslyn)
+
+```
+1. Parseia ScriptText com CSharpSyntaxTree.ParseText()
+2. Navega DescendantNodes().OfType<CatchClauseSyntax>()
+3. Se catch.Block.Statements.Count == 0 → Aviso
+```
+
+Funciona com código parcialmente inválido — Roslyn gera árvore com nós de erro
+mas `DescendantNodes()` ainda encontra os nós válidos.
+
+---
+
+### Code-2 — Cast direto em Row[] (Roslyn)
+
+```
+1. Parseia ScriptText com Roslyn
+2. Navega DescendantNodes().OfType<CastExpressionSyntax>()
+3. Se o tipo do cast está em {Boolean, DateTime, Decimal, Double, Int32, Int64}
+   E o operando contém "Row[" → Erro
+```
+
+Tipos seguros (string) e conversões explícitas (Convert.ToBoolean) não são detectados.
+
+---
+
+### Expr-1 — Campo ausente no schema
+
+```
+1. Constrói HashSet com todos os caminhos de campos do Dictionary
+   (Alias-first para BODS, Name para Column, sem o prefixo "Dados.")
+2. Para cada TextObject com Text contendo [Dados.X.Y]:
+   a. Aplica regex \[Dados\.([^\]\[()]+)\]
+   b. Verifica se caminho capturado existe no HashSet
+   c. Se não existe → Aviso
+```
+
+Expressões com funções (parênteses no regex) são automaticamente ignoradas
+porque o character class `[^\]\[()]` rejeita `(`.
+
+---
+
+### Format-1 — Formatação ausente ou incorreta
+
+```
+1. Constrói mapa caminho→DataType do Dictionary (mesma lógica do Expr-1)
+   Armazena apenas colunas com DataType != "null"
+2. Para cada TextObject:
+   a. Skip se Text contém '(' (funções como FormatDateTime, IIF)
+   b. Extrai caminho do campo via regex
+   c. Busca DataType no mapa
+   d. Para Decimal: verifica se Format="Currency"/"Number" está presente
+   e. Para DateTime: verifica se Format="Date" com Format.Pattern está presente
+```
+
+Detecta Nullable<T> via `Contains("Decimal") && Contains("Nullable")`.
+
+---
+
+## Modelo de dados
+
+```csharp
+public enum Severity { Error, Warning, Info }
+
+public class RuleResult
+{
+    public string RuleCode      { get; set; }   // "Ref-3", "Code-1", etc.
+    public Severity Severity    { get; set; }   // Error, Warning, Info
+    public string ComponentName { get; set; }   // Nome do elemento afetado
+    public string Message       { get; set; }   // Descrição curta
+    public string Detail        { get; set; }   // Contexto adicional (linha, valor)
+}
+```
+
+---
+
+## Como publicar
+
+### Opção 1 — Pasta completa (recomendado para distribuição)
+
+```bash
+dotnet publish RevisorFRX.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false
+```
+
+Gera em `RevisorFRX.App/bin/Release/net8.0-windows/win-x64/publish/` uma pasta
+com `RevisorFRX.exe` + todas as DLLs necessárias. Copie a pasta inteira para o
+computador destino. Não precisa de .NET instalado.
+
+### Opção 2 — Arquivo único (portátil, mais lento ao abrir)
+
+```bash
+dotnet publish RevisorFRX.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+```
+
+Gera um único `RevisorFRX.exe`. Na primeira execução, descompacta os arquivos
+em uma pasta temporária — isso causa lentidão inicial de alguns segundos.
+
+### Compilar no Linux/macOS para Windows
+
+```bash
+# Adicionar no RevisorFRX.App/RevisorFRX.App.csproj (já configurado):
+# <EnableWindowsTargeting>true</EnableWindowsTargeting>
+
+dotnet publish RevisorFRX.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false
+```
+
+O binário gerado roda no Windows mesmo sendo compilado em outro sistema.
+
+### Verificar antes de publicar
+
+```bash
+dotnet build RevisorFRX.sln   # deve terminar com 0 erros e 0 avisos
+```
+
+---
+
+## Como testar regras manualmente
+
+O projeto `RevisorFRX.TestRunner` (não incluído na solução principal) permite
+rodar análise diretamente no terminal:
+
+```bash
+cd RevisorFRX.TestRunner
+dotnet run
+```
+
+Para adicionar um caso de teste: edite o arquivo
+`ArquivoFRXTeste/teste_completo.frx` injetando os atributos/código desejados.
+
+---
+
+## Considerações para repositório público
+
+O projeto não contém:
+- Strings de conexão com banco de dados
+- Nomes de servidores internos
+- Credenciais ou tokens
+- Caminhos de rede internos
+
+O `RevisorFRX.Core` opera exclusivamente sobre o XML do arquivo `.frx` passado
+como string — sem acesso a banco, rede ou sistema de arquivos além do arquivo analisado.
