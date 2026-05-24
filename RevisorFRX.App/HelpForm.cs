@@ -67,6 +67,9 @@ public class HelpForm : Form
 REGRAS DE ANÁLISE
 ═════════════════════════════════════════════════════════════
 
+🔴 ERROS — impedem o relatório de funcionar corretamente
+═════════════════════════════════════════════════════════════
+
 🔴 Ref-3 — Evento sem método no ScriptText                    [ERRO]
 ──────────────────────────────────────────────────────────────
 O que é:
@@ -126,78 +129,6 @@ Como corrigir:
 
 ──────────────────────────────────────────────────────────────
 
-🔴 Ref-4 — PrintOnParent com hierarquia incorreta             [ERRO]
-──────────────────────────────────────────────────────────────
-O que é:
-  SubreportObject com PrintOnParent=true renderiza o subrelatório
-  inline, na mesma linha da banda pai. Para funcionar corretamente,
-  o DataSource da banda do subrelatório deve ser filho (descendente)
-  do DataSource da banda pai no schema de dados.
-
-Por que é perigoso:
-  Se a hierarquia estiver errada, o FastReport entra em loop tentando
-  resolver a referência, causando freeze completo da aplicação ou
-  NullReferenceException ao gerar o PDF.
-
-Exemplo correto:
-  Banda pai: DataSource="Apontamentos"
-  Banda filha: DataSource="Apresentantes"
-  → Apresentantes deve ser filho de Apontamentos no Dictionary
-
-Como corrigir:
-  Verificar o Dictionary e garantir que o DataSource do subrelatório
-  está aninhado sob o DataSource da banda pai.
-
-──────────────────────────────────────────────────────────────
-
-🟡 Layout-1 — CanGrow sem ShiftMode                          [AVISO]
-──────────────────────────────────────────────────────────────
-O que é:
-  Quando um componente tem CanGrow=true, ele pode crescer verticalmente
-  para acomodar textos longos. Os componentes abaixo dele precisam ter
-  ShiftMode=Shift para serem empurrados para baixo junto com o
-  crescimento. Sem isso, o componente crescido sobrepõe os elementos
-  abaixo.
-
-Por que é perigoso:
-  O relatório gera sem erro mas o layout fica sobreposto — textos e
-  campos se misturam visualmente. O problema só aparece com dados reais
-  longos, não é visível no Designer com dados de exemplo curtos.
-
-Exemplo do problema:
-  Campo "Endereço" com CanGrow=true
-  → endereço longo cresce 3 linhas para baixo
-  → campo "Bairro" abaixo sem ShiftMode=Shift
-  → "Bairro" fica sobreposto pelo endereço no PDF
-
-Como corrigir:
-  Adicionar ShiftMode=Shift em todos os componentes abaixo do campo
-  que tem CanGrow=true, dentro da mesma banda.
-
-──────────────────────────────────────────────────────────────
-
-🟡 Code-1 — catch vazio no ScriptText                        [AVISO]
-──────────────────────────────────────────────────────────────
-O que é:
-  Um bloco catch sem nenhum código dentro silencia qualquer exceção
-  que ocorra no bloco try correspondente. O FastReport continua a
-  renderização sem saber que houve um erro.
-
-Por que é perigoso:
-  O PDF pode gerar em branco, com valores incorretos ou parcialmente
-  preenchido — sem nenhuma mensagem de erro para o usuário ou log
-  para diagnóstico.
-
-Exemplo do problema:
-  try { txtValor.Text = CalcularValor(); }
-  catch { }  ← exceção engolida silenciosamente
-
-Como corrigir:
-  Nunca deixar catch vazio. No mínimo, registrar o erro:
-  catch (Exception ex) { /* log ou mensagem */ }
-
-──────────────────────────────────────────────────────────────
-
 🔴 Code-2 — Cast direto em Row[] sem verificação de nulo      [ERRO]
 ──────────────────────────────────────────────────────────────
 O que é:
@@ -223,22 +154,33 @@ Como corrigir:
 
 ──────────────────────────────────────────────────────────────
 
-🟡 Expr-1 — Campo ausente no schema                          [AVISO]
+🔴 Code-3 — Métodos obrigatórios ausentes no ScriptText      [ERRO]
 ──────────────────────────────────────────────────────────────
 O que é:
-  Expressões nos TextObjects seguem o padrão [Dados.Entidade.Campo].
-  Se o campo referenciado não existe no Dictionary do relatório,
-  o FastReport renderiza o campo vazio ou lança exceção em runtime.
+  Todo relatório deve conter um conjunto de métodos utilitários do
+  template padrão, usados para formatação de documentos (CPF, CNPJ,
+  etc.) de forma consistente em toda a organização.
 
-Por que é perigoso:
-  O campo aparece em branco no PDF sem nenhum aviso. Em casos mais
-  graves, o relatório inteiro para de renderizar.
+Métodos obrigatórios:
+  • AplicarMascaraDeDocumento
+  • ExtrairCaracteresNumericos
+  • AplicarMascaraDeCNPJ
+  • AplicarMascaraDeCPF
+
+Por que é erro:
+  Se um relatório não contém esses métodos, foi criado fora do
+  template padrão. Formatações de CPF e CNPJ podem estar ausentes
+  ou implementadas de forma inconsistente. Outros relatórios que
+  chamem esses métodos pelo nome vão quebrar em runtime.
 
 Como corrigir:
-  Verificar o nome exato do campo no Dictionary do FastReport Designer
-  e corrigir a expressão no TextObject.
+  Copiar os métodos utilitários do ScriptText do template padrão
+  para o ScriptText deste relatório.
 
-──────────────────────────────────────────────────────────────
+═════════════════════════════════════════════════════════════
+
+🟡 AVISOS — comportamento inesperado em runtime
+═════════════════════════════════════════════════════════════
 
 🟡 Format-1 — Formatação incorreta ou ausente                [AVISO]
 ──────────────────────────────────────────────────────────────
@@ -265,6 +207,58 @@ Como corrigir:
     Format="Currency" Format.DecimalDigits="2" Format.UseLocale="true"
   Para DateTime:
     Format="Date" Format.Pattern="dd/MM/yyyy"
+
+──────────────────────────────────────────────────────────────
+
+🟡 Expr-1 — Campo ausente no schema                          [AVISO]
+──────────────────────────────────────────────────────────────
+O que é:
+  Expressões nos TextObjects seguem o padrão [Dados.Entidade.Campo].
+  Se o campo referenciado não existe no Dictionary do relatório,
+  o FastReport renderiza o campo vazio ou lança exceção em runtime.
+
+Por que é perigoso:
+  O campo aparece em branco no PDF sem nenhum aviso. Em casos mais
+  graves, o relatório inteiro para de renderizar.
+
+Como corrigir:
+  Verificar o nome exato do campo no Dictionary do FastReport Designer
+  e corrigir a expressão no TextObject.
+
+═════════════════════════════════════════════════════════════
+
+🔵 INFO — pontos de atenção para revisão
+═════════════════════════════════════════════════════════════
+
+🔵 Code-4 — AfterData modificando componente diferente        [INFO]
+──────────────────────────────────────────────────────────────
+O que é:
+  Por convenção, o método "Text1_AfterData" é o evento AfterData
+  do componente "Text1" — ele normalmente modifica apenas as
+  propriedades do próprio Text1. Se dentro desse método o código
+  modifica "Text3.Text" ou "Text3.Visible", o revisor sinaliza
+  para que a intenção seja verificada.
+
+Quando é intencional:
+  Há casos legítimos em que um componente controla a visibilidade
+  de outro — por exemplo, Text1_AfterData ocultando um separador
+  visual adjacente. Nesses casos, o aviso pode ser ignorado.
+
+Quando indica um problema:
+  O método foi vinculado ao componente errado ou copiado de outro
+  componente sem ajustar os nomes. O componente real nunca recebe
+  o valor, enquanto outro componente recebe um valor incorreto.
+
+Exemplo:
+  private void Text1_AfterData(object sender, EventArgs e)
+  {
+      Text3.Text = "valor";  // intencional ou engano?
+  }
+
+Como avaliar:
+  Verificar se a modificação em outro componente é deliberada.
+  Se for engano, corrigir para Text1.Text ou mover a lógica para
+  o método AfterData do componente pretendido.
 """;
 
     private static string GetGlossarioContent() =>
@@ -303,29 +297,6 @@ MasterComponent
   Propriedade de uma DataBand filha que aponta para a DataBand pai.
   Define a relação mestre-detalhe: para cada linha do mestre, a filha
   renderiza seus registros correspondentes.
-
-SubreportObject
-  Componente que incorpora outro relatório (outra ReportPage) dentro
-  do relatório atual. Permite reutilizar layouts e criar seções
-  complexas com dados de fontes diferentes.
-
-PrintOnParent
-  Propriedade do SubreportObject. Quando true, o subrelatório é
-  renderizado inline na mesma linha da banda pai, em vez de em uma
-  área separada. Usado para exibir listas dentro de linhas —
-  por exemplo, mostrar os apresentantes de um apontamento na mesma
-  linha do apontamento.
-
-CanGrow
-  Propriedade de componentes de texto. Quando true, o componente
-  cresce verticalmente para acomodar o conteúdo. Se false, o texto
-  é cortado no tamanho fixo definido no Designer.
-
-ShiftMode
-  Define o comportamento de um componente quando o elemento acima
-  dele cresce (CanGrow). ShiftMode=Shift empurra o componente para
-  baixo. Sem ShiftMode, o componente fica na posição fixa e é
-  sobreposto pelo elemento que cresceu.
 
 BeforePrint / AfterData
   Eventos do ciclo de vida dos componentes FastReport.

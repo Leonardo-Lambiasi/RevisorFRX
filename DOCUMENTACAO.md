@@ -145,50 +145,15 @@ Exemplo:
 ```
 1. Parseia o ScriptText com Roslyn → extrai todos os nomes de métodos
 2. Varre todos os atributos que terminam em "Event" em qualquer elemento
-3. Se o valor do atributo não está nos métodos Roslyn → Erro
+3. Filtra os que referenciam métodos ausentes
+4. Agrupa os inválidos por nome do método ausente → conta afetados por grupo
+5. Para cada ocorrência: se o grupo tem N > 1 componentes, inclui no Detail
+   "N componentes referenciam este método ausente"
 ```
 
 Funciona com qualquer evento: `BeforePrintEvent`, `AfterDataEvent`, etc.
-
----
-
-### Ref-4 — PrintOnParent com hierarquia incorreta
-
-```
-1. Constrói mapa pai→filho dos BusinessObjectDataSource no Dictionary
-2. Para cada SubreportObject com PrintOnParent=true:
-   a. Encontra o DataSource da DataBand pai (sobe pelos Ancestors)
-   b. Encontra os DataSources de todas as DataBands na ReportPage filha
-   c. Para cada DataSource filho, verifica se é descendente do pai no mapa
-   d. Se não for → Erro
-   e. Se a ReportPage não existir → Erro
-```
-
----
-
-### Layout-1 — CanGrow sem ShiftMode
-
-```
-1. Varre todos os elementos com CanGrow="true"
-2. Para cada um, pega os irmãos na mesma banda pai
-3. Se irmão tem Top maior (está abaixo) e não tem ShiftMode="Shift" → Aviso
-```
-
-Parse de `Top` usa `CultureInfo.InvariantCulture` para funcionar independente
-do locale do sistema.
-
----
-
-### Code-1 — catch vazio (Roslyn)
-
-```
-1. Parseia ScriptText com CSharpSyntaxTree.ParseText()
-2. Navega DescendantNodes().OfType<CatchClauseSyntax>()
-3. Se catch.Block.Statements.Count == 0 → Aviso
-```
-
-Funciona com código parcialmente inválido — Roslyn gera árvore com nós de erro
-mas `DescendantNodes()` ainda encontra os nós válidos.
+O agrupamento no Detail ajuda a priorizar correções — um único método ausente
+pode resolver múltiplos erros de uma vez.
 
 ---
 
@@ -202,6 +167,39 @@ mas `DescendantNodes()` ainda encontra os nós válidos.
 ```
 
 Tipos seguros (string) e conversões explícitas (Convert.ToBoolean) não são detectados.
+
+---
+
+### Code-3 — Métodos obrigatórios ausentes
+
+```
+1. Extrai <ScriptText>
+2. Se ausente ou vazio → Erro único "ScriptText ausente ou vazio"
+3. Parseia com Roslyn → HashSet de nomes de métodos declarados
+4. Para cada método em {AplicarMascaraDeDocumento,
+   ExtrairCaracteresNumericos, AplicarMascaraDeCNPJ, AplicarMascaraDeCPF}:
+   Se não está no HashSet → Erro
+```
+
+---
+
+### Code-4 — AfterData modificando componente diferente
+
+```
+1. Parseia ScriptText com Roslyn
+2. Encontra métodos cujo nome termina em "_AfterData" (case-insensitive)
+3. Para cada método, extrai o componente esperado:
+   "Text1_AfterData" → "Text1"
+4. Dentro do corpo, encontra atribuições AssignmentExpressionSyntax
+   onde Left é MemberAccessExpressionSyntax (Algo.Propriedade = ...)
+5. Se a propriedade está em {Text, Visible}
+   E o identificador à esquerda ≠ componente esperado
+   E não é expressão composta (sem "." ou "(")
+   → Info
+```
+
+Expressões compostas (`this.X`, `Report.FindObject(...)`) são ignoradas.
+Acesso indireto via variável intermediária não é detectado (limitação conhecida).
 
 ---
 
@@ -227,14 +225,18 @@ porque o character class `[^\]\[()]` rejeita `(`.
 1. Constrói mapa caminho→DataType do Dictionary (mesma lógica do Expr-1)
    Armazena apenas colunas com DataType != "null"
 2. Para cada TextObject:
-   a. Skip se Text contém '(' (funções como FormatDateTime, IIF)
-   b. Extrai caminho do campo via regex
+   a. Aplica regex em todos os matches de [Dados.X.Y] no Text
+   b. Skipa match individual se precedido por '(' (ex: FormatDateTime([...]))
    c. Busca DataType no mapa
-   d. Para Decimal: verifica se Format="Currency"/"Number" está presente
-   e. Para DateTime: verifica se Format="Date" com Format.Pattern está presente
+   d. Coleta problemas de Decimal e DateTime em listas separadas
+   e. Gera UM resultado por tipo de problema por TextObject com resumo no Detail:
+      — 1 campo afetado: nomeia o campo e recomendação
+      — N campos afetados: lista todos no Detail
 ```
 
 Detecta Nullable<T> via `Contains("Decimal") && Contains("Nullable")`.
+O agrupamento por TextObject reduz ruído — um componente com múltiplos campos
+sem Format gera um único aviso em vez de N.
 
 ---
 

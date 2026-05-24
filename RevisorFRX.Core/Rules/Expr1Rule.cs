@@ -29,6 +29,10 @@ public class Expr1Rule
 
             foreach (Match match in matches)
             {
+                // Expressões matemáticas usam [[Dados.X]+[Dados.Y]] — o match imediatamente
+                // após o '[' externo está dentro de uma operação composta; ignorar.
+                if (match.Index > 0 && textValue[match.Index - 1] == '[') continue;
+
                 var caminho = match.Groups[1].Value.Trim();
 
                 // Filtro defensivo extra: se sobrou parêntese ou vírgula é função

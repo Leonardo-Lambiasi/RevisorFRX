@@ -13,6 +13,7 @@ public class Ref2Rule
             .Where(e => e.Name.LocalName == "BusinessObjectDataSource"
                      || e.Name.LocalName == "TableDataSource"
                      || e.Name.LocalName == "CsvDataSource")
+            .Where(e => e.Attribute("Enabled")?.Value != "false")
             .Select(e => e.Attribute("Name")?.Value)
             .Where(v => !string.IsNullOrEmpty(v))
             .ToHashSet(StringComparer.Ordinal)!;

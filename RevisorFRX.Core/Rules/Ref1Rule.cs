@@ -16,7 +16,8 @@ public class Ref1Rule
             StringComparer.Ordinal);
 
         var elementsWithMaster = doc.Descendants()
-            .Where(e => e.Attribute("MasterComponent") != null);
+            .Where(e => e.Attribute("MasterComponent") != null)
+            .Where(e => e.Name.LocalName != "ChildBand");
 
         foreach (var element in elementsWithMaster)
         {

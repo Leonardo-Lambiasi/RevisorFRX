@@ -23,3 +23,6 @@ static void Analisar(string label, string path)
 var baseDir = "/home/leonardo/Documentos/RevisorFRX/ArquivoFRXTeste";
 Analisar("ARQUIVO ORIGINAL", Path.Combine(baseDir, "Títulos Fora da Comarca.frx"));
 Analisar("TESTE COMPLETO (com casos injetados)", Path.Combine(baseDir, "teste_completo.frx"));
+Analisar("BOLETO DE PAGAMENTO", Path.Combine(baseDir, "Boleto de Pagamento (12).frx"));
+Analisar("CERTIDÃO DE CANCELAMENTO", Path.Combine(baseDir, "Certidão de Cancelamento de Protesto (6).frx"));
+Analisar("INTIMAÇÃO", Path.Combine(baseDir, "Intimação (1).frx"));

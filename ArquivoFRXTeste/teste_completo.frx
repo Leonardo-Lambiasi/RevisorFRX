@@ -21298,6 +21298,52 @@ namespace FastReport
       bool ativo = Convert.ToBoolean(Row["Ativo"] ?? false);
       string nome = (string)Row["Nome"];
     }
+
+    // Caso 7 - Code-4: deve detectar (modifica componente diferente)
+    private void Text1_AfterData(object sender, EventArgs e)
+    {
+      Text3.Text = "valor errado";
+      Text3.Visible = false;
+    }
+
+    // Caso 8 - Code-4: NÃO deve detectar (componente correto)
+    private void Text2_AfterData(object sender, EventArgs e)
+    {
+      Text2.Text = "valor correto";
+      Text2.Visible = true;
+    }
+
+    // Caso 9 - Code-4: NÃO deve detectar (propriedade não vigiada)
+    private void Text4_AfterData(object sender, EventArgs e)
+    {
+      Text5.ForeColor = Color.Red;
+    }
+
+    // Caso 10 - Code-5: deve detectar (if sem else)
+    private void Text10_AfterData(object sender, EventArgs e)
+    {
+      if (sender != null)
+        Text10.Text = "CONDICIONAL";
+      // sem else — Code-5 deve detectar
+    }
+
+    // Caso 11 - Code-5: NÃO deve detectar (if com else de reset)
+    private void Text11_AfterData(object sender, EventArgs e)
+    {
+      if (sender != null)
+        Text11.Text = "CONDICIONAL";
+      else
+        Text11.Text = string.Empty;
+    }
+
+    // Caso 12 - Code-5: deve detectar (else existe mas não reseta)
+    private void Text12_AfterData(object sender, EventArgs e)
+    {
+      if (sender != null)
+        Text12.Text = "CONDICIONAL";
+      else
+        Text12.Visible = false; // reseta Visible mas não Text — Code-5 para Text
+    }
   }
 }]]></ScriptText>
 </Report>

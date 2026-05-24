@@ -22,92 +22,77 @@ public class Format1Rule
 
         foreach (var texto in textos)
         {
-            var text = texto.Attribute("Text")!.Value;
-
-            // Ignorar TextObjects que contenham chamadas de função (FormatDateTime, IIF, etc.)
-            if (text.Contains('(')) continue;
-
-            var match = ExprRegex.Match(text);
-            if (!match.Success) continue;
-
-            var caminho = match.Groups[1].Value.Trim();
-            if (!schema.TryGetValue(caminho, out var dataType)) continue;
-
+            var text    = texto.Attribute("Text")!.Value;
             var format  = texto.Attribute("Format")?.Value ?? "";
             var pattern = texto.Attribute("Format.Pattern")?.Value ?? "";
             var nome    = texto.Attribute("Name")?.Value ?? "TextObject";
 
-            var isDecimal = dataType == "System.Decimal" ||
-                            (dataType.Contains("Decimal") && dataType.Contains("Nullable"));
+            var matches = ExprRegex.Matches(text);
+            if (matches.Count == 0) continue;
 
-            var isDateTime = dataType == "System.DateTime" ||
-                             (dataType.Contains("DateTime") && dataType.Contains("Nullable"));
+            var problemasDecimal  = new List<string>();
+            var problemasDateTime = new List<string>();
 
-            if (isDecimal)
+            foreach (Match match in matches)
             {
-                if (string.IsNullOrEmpty(format))
+                if (match.Index > 0 && text[match.Index - 1] == '(') continue;
+
+                var caminho = match.Groups[1].Value.Trim();
+                if (!schema.TryGetValue(caminho, out var dataType)) continue;
+
+                var isDecimal = dataType == "System.Decimal" ||
+                                (dataType.Contains("Decimal") && dataType.Contains("Nullable"));
+
+                var isDateTime = dataType == "System.DateTime" ||
+                                 (dataType.Contains("DateTime") && dataType.Contains("Nullable"));
+
+                if (isDecimal)
                 {
-                    results.Add(new RuleResult
-                    {
-                        RuleCode = "Format-1",
-                        Severity = Severity.Warning,
-                        ComponentName = nome,
-                        Message = $"Campo Decimal '[Dados.{caminho}]' sem Format definido.",
-                        Detail = "Recomendado: Format=\"Currency\" Format.DecimalDigits=\"2\""
-                    });
+                    if (string.IsNullOrEmpty(format))
+                        problemasDecimal.Add($"'{caminho}' sem Format");
+                    else if (format == "Date" || format == "Time" || format == "Boolean")
+                        problemasDecimal.Add($"'{caminho}' com Format=\"{format}\" incorreto");
                 }
-                else if (format == "Date" || format == "Time" || format == "Boolean")
+
+                if (isDateTime)
                 {
-                    results.Add(new RuleResult
-                    {
-                        RuleCode = "Format-1",
-                        Severity = Severity.Warning,
-                        ComponentName = nome,
-                        Message = $"Campo Decimal '[Dados.{caminho}]' com Format=\"{format}\" incorreto.",
-                        Detail = $"Format=\"{format}\" não é adequado para Decimal. " +
-                                 "Recomendado: Format=\"Currency\""
-                    });
+                    if (string.IsNullOrEmpty(format))
+                        problemasDateTime.Add($"'{caminho}' sem Format");
+                    else if (format == "Date" && string.IsNullOrEmpty(pattern))
+                        problemasDateTime.Add($"'{caminho}' sem Format.Pattern");
+                    else if (format == "Currency" || format == "Number" || format == "Boolean")
+                        problemasDateTime.Add($"'{caminho}' com Format=\"{format}\" incorreto");
                 }
             }
 
-            if (isDateTime)
+            if (problemasDecimal.Count > 0)
             {
-                if (string.IsNullOrEmpty(format))
+                var qtd = problemasDecimal.Count;
+                results.Add(new RuleResult
                 {
-                    results.Add(new RuleResult
-                    {
-                        RuleCode = "Format-1",
-                        Severity = Severity.Warning,
-                        ComponentName = nome,
-                        Message = $"Campo DateTime '[Dados.{caminho}]' sem Format definido.",
-                        Detail = "Recomendado: Format=\"Date\" Format.Pattern=\"dd/MM/yyyy\""
-                    });
-                }
-                else if (format == "Date" && string.IsNullOrEmpty(pattern))
+                    RuleCode = "Format-1",
+                    Severity = Severity.Warning,
+                    ComponentName = nome,
+                    Message = "Formatação de Decimal incorreta ou ausente.",
+                    Detail = qtd == 1
+                        ? $"{problemasDecimal[0]} — Recomendado: Format=\"Currency\" Format.DecimalDigits=\"2\""
+                        : $"{qtd} campos Decimal com problema de formatação: {string.Join("; ", problemasDecimal)}"
+                });
+            }
+
+            if (problemasDateTime.Count > 0)
+            {
+                var qtd = problemasDateTime.Count;
+                results.Add(new RuleResult
                 {
-                    results.Add(new RuleResult
-                    {
-                        RuleCode = "Format-1",
-                        Severity = Severity.Warning,
-                        ComponentName = nome,
-                        Message = $"Campo DateTime '[Dados.{caminho}]' tem Format=\"Date\" " +
-                                  "mas Format.Pattern não definido.",
-                        Detail = "O FastReport pode exibir em formato inesperado. " +
-                                 "Recomendado: Format.Pattern=\"dd/MM/yyyy\""
-                    });
-                }
-                else if (format == "Currency" || format == "Number" || format == "Boolean")
-                {
-                    results.Add(new RuleResult
-                    {
-                        RuleCode = "Format-1",
-                        Severity = Severity.Warning,
-                        ComponentName = nome,
-                        Message = $"Campo DateTime '[Dados.{caminho}]' com Format=\"{format}\" incorreto.",
-                        Detail = $"Format=\"{format}\" não é adequado para DateTime. " +
-                                 "Recomendado: Format=\"Date\" Format.Pattern=\"dd/MM/yyyy\""
-                    });
-                }
+                    RuleCode = "Format-1",
+                    Severity = Severity.Warning,
+                    ComponentName = nome,
+                    Message = "Formatação de DateTime incorreta ou ausente.",
+                    Detail = qtd == 1
+                        ? $"{problemasDateTime[0]} — Recomendado: Format=\"Date\" Format.Pattern=\"dd/MM/yyyy\""
+                        : $"{qtd} campos DateTime com problema de formatação: {string.Join("; ", problemasDateTime)}"
+                });
             }
         }
 

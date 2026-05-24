@@ -18,31 +18,44 @@ public class Ref3Rule
 
         if (!string.IsNullOrWhiteSpace(scriptText))
         {
-            var tree = CSharpSyntaxTree.ParseText(scriptText);
-            var root = tree.GetCompilationUnitRoot();
-            foreach (var method in root.DescendantNodes().OfType<MethodDeclarationSyntax>())
-                definedMethods.Add(method.Identifier.Text);
+            var root = CSharpSyntaxTree.ParseText(scriptText).GetCompilationUnitRoot();
+            definedMethods = root.DescendantNodes()
+                .OfType<MethodDeclarationSyntax>()
+                .Select(m => m.Identifier.ValueText)
+                .ToHashSet(StringComparer.Ordinal);
         }
 
-        var eventAttrs = doc.Descendants()
-            .SelectMany(e => e.Attributes())
-            .Where(a => a.Name.LocalName.EndsWith("Event") && !string.IsNullOrEmpty(a.Value));
-
-        foreach (var attr in eventAttrs)
-        {
-            var methodName = attr.Value;
-            if (!definedMethods.Contains(methodName))
-            {
-                var componentName = ((XElement)attr.Parent!).Attribute("Name")?.Value ?? attr.Parent!.Name.LocalName;
-                results.Add(new RuleResult
+        var eventosInvalidos = doc.Descendants()
+            .SelectMany(e => e.Attributes()
+                .Where(a => a.Name.LocalName.EndsWith("Event") && !string.IsNullOrEmpty(a.Value))
+                .Select(a => new
                 {
-                    RuleCode = "Ref-3",
-                    Severity = Severity.Error,
-                    ComponentName = componentName,
-                    Message = $"Evento '{attr.Name.LocalName}' referencia método '{methodName}' não encontrado no ScriptText.",
-                    Detail = $"Atributo: {attr.Name.LocalName} = \"{methodName}\""
-                });
-            }
+                    ComponentName = e.Attribute("Name")?.Value ?? e.Name.LocalName,
+                    EventAttr     = a.Name.LocalName,
+                    Metodo        = a.Value
+                }))
+            .Where(e => !definedMethods.Contains(e.Metodo))
+            .ToList();
+
+        var contagemPorMetodo = eventosInvalidos
+            .GroupBy(e => e.Metodo, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.Ordinal);
+
+        foreach (var evento in eventosInvalidos)
+        {
+            var total = contagemPorMetodo[evento.Metodo];
+            var detail = total > 1
+                ? $"Atributo: {evento.EventAttr} = \"{evento.Metodo}\" | {total} componentes referenciam este método ausente"
+                : $"Atributo: {evento.EventAttr} = \"{evento.Metodo}\"";
+
+            results.Add(new RuleResult
+            {
+                RuleCode      = "Ref-3",
+                Severity      = Severity.Error,
+                ComponentName = evento.ComponentName,
+                Message       = $"Evento '{evento.EventAttr}' referencia método '{evento.Metodo}' não encontrado no ScriptText.",
+                Detail        = detail
+            });
         }
 
         return results;

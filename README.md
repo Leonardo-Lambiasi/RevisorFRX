@@ -13,17 +13,28 @@ Ao abrir um arquivo `.frx`, o RevisorFRX aplica um conjunto de regras estáticas
 
 ## Regras implementadas
 
-| Código     | Severidade | O que verifica |
-|------------|-----------|----------------|
-| `Ref-1`    | Erro      | Atributo `MasterComponent` aponta para um componente inexistente no relatório |
-| `Ref-2`    | Erro      | Atributo `DataSource` referencia um DataSource não declarado no relatório |
-| `Ref-3`    | Erro      | Atributo `*Event` referencia um método ausente no `<ScriptText>` |
-| `Ref-4`    | Erro      | `PrintOnParent=true` com DataSource filho fora da hierarquia do DataSource pai, ou `ReportPage` referenciada inexistente |
-| `Layout-1` | Aviso     | Elemento com `CanGrow=true` tem irmãos abaixo sem `ShiftMode=Shift` (conteúdo será sobreposto ao crescer) |
-| `Code-1`   | Aviso     | Bloco `catch` vazio no `<ScriptText>` — exceção silenciada, detectado via Roslyn |
-| `Code-2`   | Erro      | Cast direto `(Boolean)`, `(DateTime)`, `(Decimal)` etc. em `Row[]` sem verificação de nulo |
-| `Expr-1`   | Aviso     | Expressão `[Dados.Entidade.Campo]` referencia campo ausente no schema do Dictionary |
-| `Format-1` | Aviso     | Campo `Decimal` sem `Format="Currency"` ou campo `DateTime` sem `Format="Date"` com `Format.Pattern` |
+### 🔴 Erros — impedem o relatório de funcionar corretamente
+
+| Código   | O que verifica |
+|----------|----------------|
+| `Ref-3`  | Atributo `*Event` referencia um método ausente no `<ScriptText>` |
+| `Ref-2`  | Atributo `DataSource` referencia um DataSource não declarado no relatório |
+| `Ref-1`  | Atributo `MasterComponent` aponta para um componente inexistente no relatório |
+| `Code-2` | Cast direto `(Boolean)`, `(DateTime)`, `(Decimal)` etc. em `Row[]` sem verificação de nulo |
+| `Code-3` | Métodos utilitários obrigatórios do template padrão ausentes no `<ScriptText>` |
+
+### 🟡 Avisos — comportamento inesperado em runtime
+
+| Código     | O que verifica |
+|------------|----------------|
+| `Format-1` | Campo `Decimal` sem `Format="Currency"` ou campo `DateTime` sem `Format="Date"` com `Format.Pattern` |
+| `Expr-1`   | Expressão `[Dados.Entidade.Campo]` referencia campo ausente no schema do Dictionary |
+
+### 🔵 Info — pontos de atenção para revisão
+
+| Código   | O que verifica |
+|----------|----------------|
+| `Code-4` | Método `*_AfterData` modifica `.Text` ou `.Visible` de componente diferente do dono do evento |
 
 ---
 
@@ -109,10 +120,9 @@ RevisorFRX/
 │   │   ├── Ref1Rule.cs           # MasterComponent inválido
 │   │   ├── Ref2Rule.cs           # DataSource não declarado
 │   │   ├── Ref3Rule.cs           # Evento → método ausente no ScriptText
-│   │   ├── Ref4Rule.cs           # PrintOnParent com hierarquia errada
-│   │   ├── Layout1Rule.cs        # CanGrow sem ShiftMode
-│   │   ├── Code1Rule.cs          # catch vazio (Roslyn)
 │   │   ├── Code2Rule.cs          # Cast direto em Row[] (Roslyn)
+│   │   ├── Code3Rule.cs          # Métodos obrigatórios ausentes (Roslyn)
+│   │   ├── Code4Rule.cs          # AfterData modificando componente diferente (Roslyn)
 │   │   ├── Expr1Rule.cs          # Campo ausente no schema
 │   │   └── Format1Rule.cs        # Formatação Decimal/DateTime ausente
 │   └── Services/
@@ -162,21 +172,18 @@ Nenhuma mudança na UI é necessária — os resultados aparecem automaticamente
 |---|---------|-----------|
 | 1 | `FrxAnalyzer.cs` | Resultados não estavam sendo ordenados por severidade |
 | 2 | `MainForm.cs` | Botão "Analisar" não era desabilitado antes do `await` (double-click disparava análise dupla) |
-| 3 | `Layout1Rule.cs` | Regra verificava apenas `TextObject`; agora aplica a qualquer elemento com `CanGrow=true` |
-| 4 | `Expr1Rule.cs` | Schema construído com prefixo `Dados.` causava falso positivo para todos os campos |
-| 5 | `Expr1Rule.cs` | Schema usava `Name` de BusinessObjectDataSource; expressões usam `Alias` — todos os campos com Alias eram falsos positivos |
-| 6 | `Ref2Rule.cs` | Elementos dentro do Dictionary com atributo `DataSource` geravam falsos positivos |
-| 7 | `Ref4Rule.cs` | Referência a `ReportPage` inexistente era silenciosa; agora gera erro |
-| 8 | `Format1Rule.cs` | `System.Nullable<Decimal>` e `System.Nullable<DateTime>` não eram detectados como tipos formatáveis |
+| 3 | `Expr1Rule.cs` | Schema construído com prefixo `Dados.` causava falso positivo para todos os campos |
+| 4 | `Expr1Rule.cs` | Schema usava `Name` de BusinessObjectDataSource; expressões usam `Alias` — todos os campos com Alias eram falsos positivos |
+| 5 | `Ref2Rule.cs` | Elementos dentro do Dictionary com atributo `DataSource` geravam falsos positivos |
+| 6 | `Format1Rule.cs` | `System.Nullable<Decimal>` e `System.Nullable<DateTime>` não eram detectados como tipos formatáveis |
 
 ---
 
 ## Limitações conhecidas
 
 - A análise roda em background (`Task.Run`) — a UI não trava, mas arquivos `.frx` muito grandes podem demorar alguns segundos.
-- `Layout-1` pode gerar múltiplos avisos para o mesmo componente quando há vários irmãos sem `ShiftMode` — comportamento intencional.
-- Análise de código (`Ref-3`, `Code-1`, `Code-2`) depende do `<ScriptText>` ser C# válido; VB.NET e Delphi não são suportados.
-- `Format-1` verifica apenas o primeiro campo `[Dados.X.Y]` de cada TextObject; TextObjects com múltiplos campos são verificados apenas pelo primeiro.
+- Análise de código (`Ref-3`, `Code-2`, `Code-3`, `Code-4`) depende do `<ScriptText>` ser C# válido; VB.NET e Delphi não são suportados.
+- `Code-4` não detecta acesso indireto via variável intermediária (`var t = Text3; t.Text = "x"`) — apenas acesso direto por nome.
 - `Format-1` não analisa TextObjects cujo Text contenha chamadas de função (parênteses) para evitar falsos positivos.
 
 ---

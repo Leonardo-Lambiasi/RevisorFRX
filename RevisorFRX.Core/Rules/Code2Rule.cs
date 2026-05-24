@@ -9,8 +9,10 @@ public class Code2Rule
 {
     private static readonly HashSet<string> TiposPerigosos = new(StringComparer.Ordinal)
     {
-        "Boolean", "DateTime", "Int64", "Int32", "Decimal", "Double",
-        "bool", "decimal", "double"
+        // nomes qualificados
+        "Boolean", "DateTime", "Int64", "Int32", "Int16", "Decimal", "Double", "Single",
+        // aliases C# (Roslyn retorna o alias quando usado no código-fonte)
+        "bool", "decimal", "double", "float", "int", "long", "short"
     };
 
     public List<RuleResult> Check(XDocument doc)
