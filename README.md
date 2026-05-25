@@ -1,4 +1,6 @@
 # RevisorFRX
+  
+Desenvolvido por **Leonardo Lambiasi**
 
 Desenvolvido por **Leonardo Lambiasi**
 
@@ -19,7 +21,6 @@ Ao abrir um arquivo `.frx`, o RevisorFRX aplica um conjunto de regras estáticas
 
 | Código   | O que verifica |
 |----------|----------------|
-| `Ref-3`  | Atributo `*Event` referencia um método ausente no `<ScriptText>` |
 | `Ref-2`  | Atributo `DataSource` referencia um DataSource não declarado no relatório |
 | `Ref-1`  | Atributo `MasterComponent` aponta para um componente inexistente no relatório |
 | `Code-2` | Cast direto `(Boolean)`, `(DateTime)`, `(Decimal)` etc. em `Row[]` sem verificação de nulo |
@@ -29,13 +30,14 @@ Ao abrir um arquivo `.frx`, o RevisorFRX aplica um conjunto de regras estáticas
 
 | Código     | O que verifica |
 |------------|----------------|
-| `Format-1` | Campo `Decimal` sem `Format="Currency"` ou campo `DateTime` sem `Format="Date"` com `Format.Pattern` |
+| `Format-1` | Campo `Decimal` sem `Format="Currency"` ou campo `DateTime` sem `Format="Date"` |
 | `Expr-1`   | Expressão `[Dados.Entidade.Campo]` referencia campo ausente no schema do Dictionary |
 
 ### 🔵 Info — pontos de atenção para revisão
 
 | Código   | O que verifica |
 |----------|----------------|
+| `Ref-3`  | Atributo `*Event` referencia um método ausente no `<ScriptText>` |
 | `Code-4` | Método `*_AfterData` modifica `.Text` ou `.Visible` de componente diferente do dono do evento |
 
 ---
@@ -119,6 +121,7 @@ RevisorFRX/
 │   ├── Models/
 │   │   └── RuleResult.cs         # Modelo de resultado (Severity, RuleCode, Message…)
 │   ├── Rules/
+│   │   ├── SchemaBuilder.cs      # Helper compartilhado: constrói mapa de campos do Dictionary
 │   │   ├── Ref1Rule.cs           # MasterComponent inválido
 │   │   ├── Ref2Rule.cs           # DataSource não declarado
 │   │   ├── Ref3Rule.cs           # Evento → método ausente no ScriptText
@@ -178,6 +181,8 @@ Nenhuma mudança na UI é necessária — os resultados aparecem automaticamente
 | 4 | `Expr1Rule.cs` | Schema usava `Name` de BusinessObjectDataSource; expressões usam `Alias` — todos os campos com Alias eram falsos positivos |
 | 5 | `Ref2Rule.cs` | Elementos dentro do Dictionary com atributo `DataSource` geravam falsos positivos |
 | 6 | `Format1Rule.cs` | `System.Nullable<Decimal>` e `System.Nullable<DateTime>` não eram detectados como tipos formatáveis |
+| 7 | `Format1Rule.cs` | DateTime com `Format="Date"` sem `Format.Pattern` gerava falso positivo — o FastReport omite o atributo quando é o valor padrão (`dd/MM/yyyy`) |
+| 8 | `MainForm.cs` | Rótulo do botão de exportação exibia `.txt` em vez de `CSV` |
 
 ---
 
@@ -186,6 +191,7 @@ Nenhuma mudança na UI é necessária — os resultados aparecem automaticamente
 - A análise roda em background (`Task.Run`) — a UI não trava, mas arquivos `.frx` muito grandes podem demorar alguns segundos.
 - Análise de código (`Ref-3`, `Code-2`, `Code-3`, `Code-4`) depende do `<ScriptText>` ser C# válido; VB.NET e Delphi não são suportados.
 - `Code-4` não detecta acesso indireto via variável intermediária (`var t = Text3; t.Text = "x"`) — apenas acesso direto por nome.
+- `Format-1` não analisa TextObjects cujo Text contenha expressões matemáticas (`[[Dados.A] + [Dados.B]]`) ou texto literal misturado com campos (`Protocolo: [Dados.X] - [Dados.Data]`) — nesses casos o `Format` age sobre o valor completo já resolvido, não sobre cada campo individualmente. Use funções de formato na própria expressão: `[Format([Dados.Data], 'dd/MM/yyyy')]`.
 - `Format-1` não analisa TextObjects cujo Text contenha chamadas de função (parênteses) para evitar falsos positivos.
 
 ---

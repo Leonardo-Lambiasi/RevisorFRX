@@ -21234,6 +21234,7 @@
     </PageHeaderBand>
     <DataBand Name="Data1" Top="199.39" Width="1047.06" Height="18.92" DataSource="Apontamentos">
       <TextObject Name="Text390" Left="929.1" Width="116.95" Height="18.9" Text="[Dados.Apontamentos.Titulo.ValorAProtestar]" VertAlign="Center" Font="Arial, 10pt"/>
+      <TextObject Name="TesteExpr1_CampoInexistente" Left="0" Top="0.02" Width="200" Height="18.9" Text="[Dados.Apontamentos.CampoQueNaoExiste]" VertAlign="Center" Font="Arial, 9pt"/>
       <TextObject Name="Text387" Top="0.02" Width="109.95" CanGrow="true" Height="18.9" Text="[PadLeft(ToString([Dados.Apontamentos.NumeroDoProtocolo]),4,'0')] - [FormatDateTime([Dados.Apontamentos.DataDoProtocolo], &quot;dd/MM/yyyy&quot;)]" Font="Arial, 9pt"/>
       <SubreportObject Name="Subreport1" Left="113.4" Width="633.15" Height="18.9" ReportPage="Page2" PrintOnParent="true"/>
       <TextObject Name="Text388" Left="751" BeforePrintEvent="MetodoQueExiste" Top="0.02" Width="60.15" Height="18.9" Text="[Dados.Apontamentos.Titulo.Especie.Sigla]" VertAlign="Center" Font="Arial, 10pt"/>
@@ -21255,6 +21256,12 @@
       <TextObject Name="Text360" Width="258.93" Height="18.9" Fill.Color="222, 255, 255, 255" Text="Impresso em [Date]" VertAlign="Center" Font="Arial, 7pt"/>
       <TextObject Name="Text5" Left="889.85" Top="1.45" Width="154.98" Height="18.9" Fill.Color="222, 255, 255, 255" Text="Página [Page] de [TotalPages#]" HorzAlign="Right" VertAlign="Center" Font="Arial, 7pt"/>
     </PageFooterBand>
+    <DataBand Name="TesteRef1_MasterComponentInvalido" Width="1047.06" Height="18.9" MasterComponent="DataBandQueNaoExiste" DataSource="Apontamentos">
+      <TextObject Name="TextTesteRef1" Width="300" Height="18.9" Text="Teste Ref-1: MasterComponent inválido" Font="Arial, 9pt"/>
+    </DataBand>
+    <DataBand Name="TesteRef2_DataSourceInvalido" Width="1047.06" Height="18.9" DataSource="FonteInexistente">
+      <TextObject Name="TextTesteRef2" Width="300" Height="18.9" Text="Teste Ref-2: DataSource não declarado" Font="Arial, 9pt"/>
+    </DataBand>
   </ReportPage>
   <ReportPage Name="Page2" Watermark.Font="Arial, 60pt">
     <DataBand Name="Data2" Width="718.2" Height="18.9" DataSource="BusinessObjectDataSource659">
@@ -21273,76 +21280,48 @@ namespace FastReport
 {
   public class ReportScript
   {
-    // Caso 2 - Ref-3: método que EXISTE (não deve gerar erro)
+    // ── Ref-3 (Info): "MetodoQueNaoExiste" está referenciado em Text351 mas ausente aqui
+    // ── Ref-3 negativo: método abaixo EXISTE — não deve gerar resultado
     private void MetodoQueExiste(object sender, EventArgs e)
     {
     }
 
-    // Caso 4 - Code-1: catch vazio
-    private void TesteCode1(object sender, EventArgs e)
-    {
-      try { var x = 1; }
-      catch { }
-    }
-
-    // Caso 5 - Code-2: casts inseguros (devem detectar)
+    // ── Code-2 (Error): casts diretos em Row[] — devem ser detectados
     private void TesteCode2(object sender, EventArgs e)
     {
       bool ativo = (Boolean)Row["Ativo"];
       DateTime data = (DateTime)Row["Data"];
     }
 
-    // Caso 6 - Code-2: SEGURO (não deve detectar)
+    // ── Code-2 negativo: conversões seguras — NÃO devem ser detectadas
     private void TesteCode2Seguro(object sender, EventArgs e)
     {
       bool ativo = Convert.ToBoolean(Row["Ativo"] ?? false);
       string nome = (string)Row["Nome"];
     }
 
-    // Caso 7 - Code-4: deve detectar (modifica componente diferente)
+    // ── Code-3 (Error): os 4 métodos obrigatórios (AplicarMascaraDeDocumento,
+    //    ExtrairCaracteresNumericos, AplicarMascaraDeCNPJ, AplicarMascaraDeCPF)
+    //    estão INTENCIONALMENTE ausentes para disparar Code-3.
+
+    // ── Code-4 (Info): modifica Text3 dentro de Text1_AfterData — deve detectar
     private void Text1_AfterData(object sender, EventArgs e)
     {
       Text3.Text = "valor errado";
       Text3.Visible = false;
     }
 
-    // Caso 8 - Code-4: NÃO deve detectar (componente correto)
+    // ── Code-4 negativo: componente correto — NÃO deve detectar
     private void Text2_AfterData(object sender, EventArgs e)
     {
       Text2.Text = "valor correto";
       Text2.Visible = true;
     }
 
-    // Caso 9 - Code-4: NÃO deve detectar (propriedade não vigiada)
+    // ── Code-4 negativo: propriedade não vigiada (ForeColor) — NÃO deve detectar
     private void Text4_AfterData(object sender, EventArgs e)
     {
       Text5.ForeColor = Color.Red;
-    }
-
-    // Caso 10 - Code-5: deve detectar (if sem else)
-    private void Text10_AfterData(object sender, EventArgs e)
-    {
-      if (sender != null)
-        Text10.Text = "CONDICIONAL";
-      // sem else — Code-5 deve detectar
-    }
-
-    // Caso 11 - Code-5: NÃO deve detectar (if com else de reset)
-    private void Text11_AfterData(object sender, EventArgs e)
-    {
-      if (sender != null)
-        Text11.Text = "CONDICIONAL";
-      else
-        Text11.Text = string.Empty;
-    }
-
-    // Caso 12 - Code-5: deve detectar (else existe mas não reseta)
-    private void Text12_AfterData(object sender, EventArgs e)
-    {
-      if (sender != null)
-        Text12.Text = "CONDICIONAL";
-      else
-        Text12.Visible = false; // reseta Visible mas não Text — Code-5 para Text
     }
   }
 }]]></ScriptText>

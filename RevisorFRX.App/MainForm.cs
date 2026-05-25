@@ -165,7 +165,7 @@ public class MainForm : Form
         // --- Rodapé ---
         _exportButton = new Button
         {
-            Text = "Exportar relatório .txt",
+            Text = "Exportar relatório CSV",
             Location = new Point(16, 528),
             Size = new Size(185, 30),
             Visible = false,

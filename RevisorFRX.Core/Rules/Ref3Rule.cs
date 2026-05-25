@@ -51,7 +51,7 @@ public class Ref3Rule
             results.Add(new RuleResult
             {
                 RuleCode      = "Ref-3",
-                Severity      = Severity.Error,
+                Severity      = Severity.Info,
                 ComponentName = evento.ComponentName,
                 Message       = $"Evento '{evento.EventAttr}' referencia método '{evento.Metodo}' não encontrado no ScriptText.",
                 Detail        = detail

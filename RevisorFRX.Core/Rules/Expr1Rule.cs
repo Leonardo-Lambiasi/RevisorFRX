@@ -56,42 +56,5 @@ public class Expr1Rule
     }
 
     private static HashSet<string> ConstruirSchema(XDocument doc)
-    {
-        var schema = new HashSet<string>(StringComparer.Ordinal);
-
-        var dictionary = doc.Descendants()
-            .FirstOrDefault(e => e.Name.LocalName == "Dictionary");
-        if (dictionary == null) return schema;
-
-        // Expressões usam [Dados.X.Y] — "Dados" é o nome do BusinessObjectDataSource
-        // raiz. Iniciamos a partir dos filhos de cada fonte raiz para que as chaves
-        // do schema não incluam o prefixo "Dados." e correspondam ao que a regex captura.
-        foreach (var topSource in dictionary.Elements())
-            ConstruirSchemaRecursivo(topSource, "", schema);
-
-        return schema;
-    }
-
-    private static void ConstruirSchemaRecursivo(XElement elemento,
-        string caminhoAtual, HashSet<string> schema)
-    {
-        foreach (var filho in elemento.Elements())
-        {
-            // BusinessObjectDataSource usa Alias nas expressões [Dados.X.Y];
-            // Column não tem Alias — cai para Name naturalmente.
-            var nome = filho.Attribute("Alias")?.Value;
-            if (string.IsNullOrEmpty(nome))
-                nome = filho.Attribute("Name")?.Value;
-            if (string.IsNullOrEmpty(nome)) continue;
-
-            var caminho = string.IsNullOrEmpty(caminhoAtual)
-                ? nome
-                : $"{caminhoAtual}.{nome}";
-
-            if (filho.Name.LocalName == "Column")
-                schema.Add(caminho);
-
-            ConstruirSchemaRecursivo(filho, caminho, schema);
-        }
-    }
+        => new(SchemaBuilder.BuildTypeMap(doc).Keys, StringComparer.Ordinal);
 }

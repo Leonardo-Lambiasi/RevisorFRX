@@ -23,12 +23,20 @@ public class Format1Rule
         foreach (var texto in textos)
         {
             var text    = texto.Attribute("Text")!.Value;
-            var format  = texto.Attribute("Format")?.Value ?? "";
-            var pattern = texto.Attribute("Format.Pattern")?.Value ?? "";
-            var nome    = texto.Attribute("Name")?.Value ?? "TextObject";
+            var format = texto.Attribute("Format")?.Value ?? "";
+            var nome   = texto.Attribute("Name")?.Value ?? "TextObject";
+
+            // Expressões matemáticas ([[Dados.A] + [Dados.B]]) não têm formatação
+            // por campo — o Format do TextObject se aplica ao resultado da conta inteira.
+            if (text.Contains("[[")) continue;
 
             var matches = ExprRegex.Matches(text);
             if (matches.Count == 0) continue;
+
+            // TextObjects com conteúdo misto (texto estático + campos) não são
+            // formatáveis por campo — Format age sobre o valor completo já resolvido.
+            // Nesses casos o dev deve usar funções de formato na própria expressão.
+            if (!string.IsNullOrWhiteSpace(ExprRegex.Replace(text, ""))) continue;
 
             var problemasDecimal  = new List<string>();
             var problemasDateTime = new List<string>();
@@ -58,8 +66,6 @@ public class Format1Rule
                 {
                     if (string.IsNullOrEmpty(format))
                         problemasDateTime.Add($"'{caminho}' sem Format");
-                    else if (format == "Date" && string.IsNullOrEmpty(pattern))
-                        problemasDateTime.Add($"'{caminho}' sem Format.Pattern");
                     else if (format == "Currency" || format == "Number" || format == "Boolean")
                         problemasDateTime.Add($"'{caminho}' com Format=\"{format}\" incorreto");
                 }
@@ -90,7 +96,7 @@ public class Format1Rule
                     ComponentName = nome,
                     Message = "Formatação de DateTime incorreta ou ausente.",
                     Detail = qtd == 1
-                        ? $"{problemasDateTime[0]} — Recomendado: Format=\"Date\" Format.Pattern=\"dd/MM/yyyy\""
+                        ? $"{problemasDateTime[0]} — Recomendado: Format=\"Date\""
                         : $"{qtd} campos DateTime com problema de formatação: {string.Join("; ", problemasDateTime)}"
                 });
             }
@@ -100,47 +106,7 @@ public class Format1Rule
     }
 
     private static Dictionary<string, string> ConstruirMapaDeTipos(XDocument doc)
-    {
-        var mapa = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        var dictionary = doc.Descendants()
-            .FirstOrDefault(e => e.Name.LocalName == "Dictionary");
-        if (dictionary == null) return mapa;
-
-        // Mesmo padrão do Expr1Rule: iniciar dos filhos de cada fonte raiz para
-        // que as chaves não incluam o prefixo "Dados." da expressão.
-        foreach (var topSource in dictionary.Elements())
-            ConstruirRecursivo(topSource, "", mapa);
-
-        return mapa;
-    }
-
-    private static void ConstruirRecursivo(XElement elemento,
-        string caminhoAtual, Dictionary<string, string> mapa)
-    {
-        foreach (var filho in elemento.Elements())
-        {
-            // BusinessObjectDataSource usa Alias nas expressões [Dados.X.Y];
-            // Column não tem Alias — cai para Name naturalmente.
-            var nome = filho.Attribute("Alias")?.Value;
-            if (string.IsNullOrEmpty(nome))
-                nome = filho.Attribute("Name")?.Value;
-            if (string.IsNullOrEmpty(nome)) continue;
-
-            var caminho = string.IsNullOrEmpty(caminhoAtual)
-                ? nome
-                : $"{caminhoAtual}.{nome}";
-
-            var dataType = filho.Attribute("DataType")?.Value ?? "";
-
-            if (filho.Name.LocalName == "Column" &&
-                !string.IsNullOrEmpty(dataType) &&
-                dataType != "null")
-            {
-                mapa[caminho] = dataType;
-            }
-
-            ConstruirRecursivo(filho, caminho, mapa);
-        }
-    }
+        => SchemaBuilder.BuildTypeMap(doc)
+            .Where(kv => !string.IsNullOrEmpty(kv.Value))
+            .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
 }

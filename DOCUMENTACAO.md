@@ -16,6 +16,16 @@ RevisorFRX.App    →   Interface WinForms. Apenas chama o Core e exibe resultad
 Isso permite reutilizar o Core em outros contextos (CLI, testes, integração CI) sem
 arrastar dependências de interface.
 
+Dentro do Core, o helper `SchemaBuilder` é compartilhado entre `Expr1Rule` e `Format1Rule`:
+
+```
+SchemaBuilder.BuildTypeMap(doc)
+    → Dictionary<string, string>   (caminho → DataType)
+
+Expr1Rule   usa as Keys como HashSet para verificar existência de campos
+Format1Rule filtra entradas com DataType preenchido para verificar formatação
+```
+
 ---
 
 ## Fluxo de execução
@@ -206,7 +216,7 @@ Acesso indireto via variável intermediária não é detectado (limitação conh
 ### Expr-1 — Campo ausente no schema
 
 ```
-1. Constrói HashSet com todos os caminhos de campos do Dictionary
+1. Constrói HashSet com todos os caminhos de campos do Dictionary via SchemaBuilder
    (Alias-first para BODS, Name para Column, sem o prefixo "Dados.")
 2. Para cada TextObject com Text contendo [Dados.X.Y]:
    a. Aplica regex \[Dados\.([^\]\[()]+)\]
@@ -222,8 +232,8 @@ porque o character class `[^\]\[()]` rejeita `(`.
 ### Format-1 — Formatação ausente ou incorreta
 
 ```
-1. Constrói mapa caminho→DataType do Dictionary (mesma lógica do Expr-1)
-   Armazena apenas colunas com DataType != "null"
+1. Constrói mapa caminho→DataType via SchemaBuilder (compartilhado com Expr-1)
+   Filtra apenas colunas com DataType preenchido e diferente de "null"
 2. Para cada TextObject:
    a. Aplica regex em todos os matches de [Dados.X.Y] no Text
    b. Skipa match individual se precedido por '(' (ex: FormatDateTime([...]))
@@ -237,6 +247,17 @@ porque o character class `[^\]\[()]` rejeita `(`.
 Detecta Nullable<T> via `Contains("Decimal") && Contains("Nullable")`.
 O agrupamento por TextObject reduz ruído — um componente com múltiplos campos
 sem Format gera um único aviso em vez de N.
+
+**Nota sobre DateTime:** a regra aceita qualquer valor de `Format` que não seja
+`Currency`, `Number` ou `Boolean`. `Format.Pattern` não é exigido — o FastReport
+omite esse atributo no XML quando o padrão `dd/MM/yyyy` está em uso.
+
+**TextObjects ignorados pelo Format-1:**
+- Text com `[[` → expressão matemática (`[[Dados.A] + [Dados.B]]`)
+- Text com texto estático misturado (`Protocolo: [Dados.X] - [Dados.Data]`) — detectado
+  removendo todos os matches `[Dados.X.Y]` do Text e verificando se sobra conteúdo não-branco.
+  Nesses casos o `Format` age sobre o valor já resolvido; use `[Format([Dados.Data], 'dd/MM/yyyy')]`.
+- Text com chamada de função (`(` detectado na regex)
 
 ---
 

@@ -70,32 +70,6 @@ REGRAS DE ANÁLISE
 🔴 ERROS — impedem o relatório de funcionar corretamente
 ═════════════════════════════════════════════════════════════
 
-🔴 Ref-3 — Evento sem método no ScriptText                    [ERRO]
-──────────────────────────────────────────────────────────────
-O que é:
-  Componentes do FastReport (TextObject, DataBand, etc.) podem disparar
-  eventos C# em momentos específicos da renderização, como BeforePrint
-  (antes de imprimir o componente) e AfterData (após processar os dados).
-  Esses eventos referenciam métodos pelo nome — se o método não existe
-  no ScriptText, o evento nunca é executado.
-
-Por que é perigoso:
-  O FastReport não lança erro quando o método está ausente. O relatório
-  gera normalmente, mas a lógica do evento (visibilidade condicional,
-  formatação, cálculos) é silenciosamente ignorada. O PDF sai errado
-  sem nenhum aviso.
-
-Exemplo do problema:
-  TextObject com AfterDataEvent="CalcularTotal"
-  → método CalcularTotal não existe no ScriptText
-  → o campo nunca é formatado
-
-Como corrigir:
-  Criar o método no ScriptText, ou remover o atributo do componente
-  se o evento não for mais necessário.
-
-──────────────────────────────────────────────────────────────
-
 🔴 Ref-2 — DataSource não declarado                           [ERRO]
 ──────────────────────────────────────────────────────────────
 O que é:
@@ -198,15 +172,15 @@ Casos detectados:
     de forma completamente errada
   • Campo DateTime sem Format → exibe data e hora juntos no
     formato do SO (pode vir MM/dd/yyyy em máquinas em inglês)
-  • Campo DateTime com Format="Date" mas sem Format.Pattern →
-    padrão pode variar entre ambientes
   • Campo DateTime com Format de moeda ou número → dado errado
 
 Como corrigir:
   Para Decimal:
     Format="Currency" Format.DecimalDigits="2" Format.UseLocale="true"
   Para DateTime:
-    Format="Date" Format.Pattern="dd/MM/yyyy"
+    Format="Date"
+    (Format.Pattern é opcional — o padrão dd/MM/yyyy é aplicado
+    automaticamente pelo FastReport quando omitido)
 
 ──────────────────────────────────────────────────────────────
 
@@ -229,6 +203,31 @@ Como corrigir:
 
 🔵 INFO — pontos de atenção para revisão
 ═════════════════════════════════════════════════════════════
+
+🔵 Ref-3 — Evento sem método no ScriptText                    [INFO]
+──────────────────────────────────────────────────────────────
+O que é:
+  Componentes do FastReport (TextObject, DataBand, etc.) podem disparar
+  eventos C# em momentos específicos da renderização, como BeforePrint
+  (antes de imprimir o componente) e AfterData (após processar os dados).
+  Esses eventos referenciam métodos pelo nome — se o método não existe
+  no ScriptText, o evento nunca é executado.
+
+O que pode acontecer:
+  O FastReport não lança erro quando o método está ausente. O relatório
+  gera normalmente, mas a lógica do evento (visibilidade condicional,
+  formatação, cálculos) é silenciosamente ignorada.
+
+Exemplo do problema:
+  TextObject com AfterDataEvent="CalcularTotal"
+  → método CalcularTotal não existe no ScriptText
+  → o campo nunca é formatado
+
+Como corrigir:
+  Criar o método no ScriptText, ou remover o atributo do componente
+  se o evento não for mais necessário.
+
+──────────────────────────────────────────────────────────────
 
 🔵 Code-4 — AfterData modificando componente diferente        [INFO]
 ──────────────────────────────────────────────────────────────
