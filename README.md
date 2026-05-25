@@ -2,8 +2,6 @@
   
 Desenvolvido por **Leonardo Lambiasi**
 
-Desenvolvido por **Leonardo Lambiasi**
-
 Ferramenta desktop para análise estática de relatórios **FastReport** (`.frx`).  
 Detecta referências quebradas, problemas de layout e código problemático — sem abrir o FastReport Designer.
 
@@ -55,7 +53,7 @@ Ao abrir um arquivo `.frx`, o RevisorFRX aplica um conjunto de regras estáticas
 │                                                               │
 │  Regra   │ Severidade │ Componente │ Mensagem   │ Detalhe    │
 │  ────────┼────────────┼────────────┼────────────┼─────────── │
-│  Ref-3   │ Error      │ Text364    │ Método...  │ ...        │
+│  Ref-3   │ Info       │ Text364    │ Método...  │ ...        │
 │  Ref-1   │ Error      │ SubReport1 │ Master...  │ ...        │
 │  ...                                                          │
 │                                                               │
