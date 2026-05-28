@@ -9,4 +9,5 @@ public class RuleResult
     public string ComponentName { get; set; } = "";
     public string Message { get; set; } = "";
     public string Detail { get; set; } = "";
+    public string FileName { get; set; } = "";
 }

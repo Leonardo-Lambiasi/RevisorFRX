@@ -11,6 +11,8 @@ Detecta referências quebradas, problemas de layout e código problemático — 
 
 Ao abrir um arquivo `.frx`, o RevisorFRX aplica um conjunto de regras estáticas e exibe os resultados em uma tabela, classificados por severidade. Erros impedem o relatório de funcionar corretamente; avisos indicam comportamento inesperado em runtime.
 
+Todas as regras podem ser ativadas/desativadas individualmente pelo botão **⚙** na tela principal.
+
 ---
 
 ## Regras implementadas
@@ -21,7 +23,7 @@ Ao abrir um arquivo `.frx`, o RevisorFRX aplica um conjunto de regras estáticas
 |----------|----------------|
 | `Ref-2`  | Atributo `DataSource` referencia um DataSource não declarado no relatório |
 | `Ref-1`  | Atributo `MasterComponent` aponta para um componente inexistente no relatório |
-| `Code-2` | Cast direto `(Boolean)`, `(DateTime)`, `(Decimal)` etc. em `Row[]` sem verificação de nulo |
+| `Code-2` | Cast direto em `Row[]` sem verificação de nulo (qualquer value type) ou `.Value` sem `HasValue` |
 | `Code-3` | Métodos utilitários obrigatórios do template padrão ausentes no `<ScriptText>` |
 
 ### 🟡 Avisos — comportamento inesperado em runtime
@@ -29,33 +31,31 @@ Ao abrir um arquivo `.frx`, o RevisorFRX aplica um conjunto de regras estáticas
 | Código     | O que verifica |
 |------------|----------------|
 | `Format-1` | Campo `Decimal` sem `Format="Currency"` ou campo `DateTime` sem `Format="Date"` |
+| `Format-6` | TextObject contém tags HTML (`<b>`, `<i>`, etc.) mas `TextRenderType` não é `HtmlTags` |
+| `Format-7` | Barcode com `Barcode.CalcCheckSum` diferente de `false` — checksum habilitado pode gerar códigos inválidos |
 | `Expr-1`   | Expressão `[Dados.Entidade.Campo]` referencia campo ausente no schema do Dictionary |
-
-### 🔵 Info — pontos de atenção para revisão
-
-| Código   | O que verifica |
-|----------|----------------|
-| `Ref-3`  | Atributo `*Event` referencia um método ausente no `<ScriptText>` |
-| `Code-4` | Método `*_AfterData` modifica `.Text` ou `.Visible` de componente diferente do dono do evento |
-
+| `Expr-2`   | Expressão `[Dados.Entidade.Campo]` referencia campo com `DataType="null"` (objeto não escalar) |
+| `Ref-12`   | TextObject com `CanGrow="true"` dentro de DataBand sem `CanGrow="true"` — texto pode sobrepor |
+| `Code-4`  | CNPJ pode conter letras — detecta validações/máscaras que assumem apenas dígitos |
+| `Ref-10`  | Colchetes `[` `]` desbalanceados no `Text` — expressão não resolve corretamente |
 ---
 
 ## Interface
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  RevisorFRX                                               [?] │
+│  RevisorFRX                                              [⚙][?] │
 │  Análise estática de relatórios FastReport (.frx)             │
 │                                                               │
-│  [Selecionar arquivo .frx]  NomeDoArquivo.frx     [Analisar] │
+│  [Selecionar arquivo .frx]  NomeDoArquivo.frx  [Selecionar pasta] [Analisar] │
 │  ─────────────────────────────────────────────────────────── │
 │  [ 3 Erros ] [ 2 Avisos ] [ 0 Info ]                         │
 │                                                               │
-│  Regra   │ Severidade │ Componente │ Mensagem   │ Detalhe    │
-│  ────────┼────────────┼────────────┼────────────┼─────────── │
-│  Ref-3   │ Info       │ Text364    │ Método...  │ ...        │
-│  Ref-1   │ Error      │ SubReport1 │ Master...  │ ...        │
-│  ...                                                          │
+│  Regra   │ Severidade │ Arquivo    │ Componente │ Mensagem   │ Detalhe    │
+│  ────────┼────────────┼────────────┼────────────┼────────────┼─────────── │
+│  Ref-10  │ Warning    │ rel.frx    │ Text364    │ Colchetes  │ ...        │
+│  Ref-1   │ Error      │ rel.frx    │ SubReport1 │ Master...  │ ...        │
+│  ...                                                              │
 │                                                               │
 │  [Exportar relatório CSV]                                     │
 └──────────────────────────────────────────────────────────────┘
@@ -64,6 +64,7 @@ Ao abrir um arquivo `.frx`, o RevisorFRX aplica um conjunto de regras estáticas
 - Linhas vermelhas → `Error` | Linhas amarelas → `Warning` | Linhas azuis → `Info`
 - Exportação gera `.csv` compatível com Excel: `RevisorFRX_NomeArquivo_yyyyMMdd_HHmmss.csv`
 - Botão `[?]` abre guia de regras e glossário de termos FastReport
+- Botão `[⚙]` abre tela de configuração para ativar/desativar regras individualmente
 
 ---
 
@@ -117,24 +118,48 @@ RevisorFRX/
 ├── DOCUMENTACAO.md               # Como funciona internamente
 ├── RevisorFRX.Core/              # Lógica pura, sem dependência de UI
 │   ├── Models/
-│   │   └── RuleResult.cs         # Modelo de resultado (Severity, RuleCode, Message…)
+│   │   ├── RuleResult.cs         # Modelo de resultado (Severity, RuleCode, Message…)
+│   │   ├── RuleDefinition.cs     # Metadados de cada regra (código, descrição, severidade)
+│   │   └── RuleConfig.cs         # Estado on/off por regra
+│   ├── RuleRegistry.cs           # Catálogo central com todas as regras do sistema
 │   ├── Rules/
 │   │   ├── SchemaBuilder.cs      # Helper compartilhado: constrói mapa de campos do Dictionary
 │   │   ├── Ref1Rule.cs           # MasterComponent inválido
 │   │   ├── Ref2Rule.cs           # DataSource não declarado
-│   │   ├── Ref3Rule.cs           # Evento → método ausente no ScriptText
-│   │   ├── Code2Rule.cs          # Cast direto em Row[] (Roslyn)
+│   │   ├── Code2Rule.cs          # Cast direto em Row[] + .Value sem HasValue (Roslyn semântico)
 │   │   ├── Code3Rule.cs          # Métodos obrigatórios ausentes (Roslyn)
-│   │   ├── Code4Rule.cs          # AfterData modificando componente diferente (Roslyn)
 │   │   ├── Expr1Rule.cs          # Campo ausente no schema
-│   │   └── Format1Rule.cs        # Formatação Decimal/DateTime ausente
+│   │   ├── Expr2Rule.cs          # Campo não escalar em expressão
+│   │   ├── Ref10Rule.cs          # Colchetes desbalanceados
+│   │   ├── Format1Rule.cs        # Formatação Decimal/DateTime ausente
+│   │   ├── Format6Rule.cs        # Tags HTML sem HtmlTags ativado
+│   │   ├── Format7Rule.cs        # Barcode sem Checksum=false
+│   │   ├── Code4Rule.cs          # CNPJ alfanumérico (jul/2026)
+│   │   └── Ref12Rule.cs          # CanGrow inconsistente banda vs TextObject
 │   └── Services/
 │       └── FrxAnalyzer.cs        # Orquestra as regras e ordena por severidade
 └── RevisorFRX.App/               # WinForms — apenas UI
     ├── MainForm.cs               # Janela principal
+    ├── ConfigForm.cs             # Tela de ativação/desativação de regras
     ├── HelpForm.cs               # Guia de regras e glossário
     └── Program.cs
 ```
+
+---
+
+## Modo batch (CLI)
+
+O `RevisorFRX.TestRunner` suporta análise em lote via terminal:
+
+```bash
+dotnet run                      # Analisa arquivos fixos definidos no código
+dotnet run -- --relatorio       # Gera relatório markdown de todos .frx da pasta
+dotnet run -- --batch <dir>     # Analisa todos .frx de uma pasta
+dotnet run -- --file <caminho>  # Analisa um arquivo específico
+```
+
+O relatório markdown (`--relatorio`) inclui tabela de totais
+e detalhamento por regra, pronto para colar em issues ou PRs.
 
 ---
 
@@ -159,13 +184,25 @@ public class MinhaRegra
 }
 ```
 
-2. Registre em `FrxAnalyzer.cs`:
+2. Registre no catálogo central em `RevisorFRX.Core/RuleRegistry.cs`:
 
 ```csharp
-results.AddRange(new MinhaRegra().Check(doc));
+new() { Code = "XX-N", Description = "Descrição da regra", DefaultSeverity = Severity.Warning },
 ```
 
-Nenhuma mudança na UI é necessária — os resultados aparecem automaticamente na tabela.
+3. Registre em `FrxAnalyzer.cs` — adicione um campo `static readonly` e a chamada no método `Analyze`:
+
+```csharp
+private static readonly MinhaRegra MinhaRegra = new();
+
+// Dentro de Analyze():
+if (config.IsEnabled("XX-N"))
+    results.AddRange(MinhaRegra.Check(doc));
+```
+
+A regra aparece automaticamente na tela de configuração (⚙) e pode ser ativada/desativada pelo usuário.
+
+> Para regras que devem vir desabilitadas por padrão na interface, use `DefaultEnabled = false` no `RuleRegistry`. O modo CLI/TestRunner (`AllEnabled()`) sempre executa todas as regras independentemente.
 
 ---
 
@@ -187,10 +224,11 @@ Nenhuma mudança na UI é necessária — os resultados aparecem automaticamente
 ## Limitações conhecidas
 
 - A análise roda em background (`Task.Run`) — a UI não trava, mas arquivos `.frx` muito grandes podem demorar alguns segundos.
-- Análise de código (`Ref-3`, `Code-2`, `Code-3`, `Code-4`) depende do `<ScriptText>` ser C# válido; VB.NET e Delphi não são suportados.
-- `Code-4` não detecta acesso indireto via variável intermediária (`var t = Text3; t.Text = "x"`) — apenas acesso direto por nome.
+- Análise de código (`Code-2`, `Code-3`) depende do `<ScriptText>` ser C# válido; VB.NET e Delphi não são suportados.
 - `Format-1` não analisa TextObjects cujo Text contenha expressões matemáticas (`[[Dados.A] + [Dados.B]]`) ou texto literal misturado com campos (`Protocolo: [Dados.X] - [Dados.Data]`) — nesses casos o `Format` age sobre o valor completo já resolvido, não sobre cada campo individualmente. Use funções de formato na própria expressão: `[Format([Dados.Data], 'dd/MM/yyyy')]`.
 - `Format-1` não analisa TextObjects cujo Text contenha chamadas de função (parênteses) para evitar falsos positivos.
+- `Format-7` verifica `Barcode.CalcCheckSum` — se o atributo não existe no XML, a regra não dispara (assinatura do FastReport para tipos como QR Code não utilizam este atributo).
+- `Ref-3` removido — taxa de falso positivo >70% nos modelos reais (eventos legados/tratados externamente). O código (`Ref3Rule.cs`) permanece no repositório como referência, mas não é registrado.
 
 ---
 

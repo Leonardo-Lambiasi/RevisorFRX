@@ -73,57 +73,46 @@ REGRAS DE ANÁLISE
 🔴 Ref-2 — DataSource não declarado                           [ERRO]
 ──────────────────────────────────────────────────────────────
 O que é:
-  Cada DataBand (banda de dados) precisa referenciar uma fonte de dados
-  declarada no Dictionary do relatório. Se o DataSource referenciado
-  não existe, a banda não itera sobre nenhum dado.
+  Cada DataBand precisa referenciar uma fonte de dados declarada
+  no Dictionary. Se o DataSource não existe, a banda não itera.
 
 Por que é perigoso:
-  A banda renderiza vazia ou lança NullReferenceException em runtime,
-  dependendo da versão do FastReport.
+  A banda renderiza vazia ou lança NullReferenceException.
 
 Como corrigir:
-  Verificar o nome do DataSource na propriedade da DataBand e garantir
-  que existe um BusinessObjectDataSource com o mesmo nome no Dictionary.
+  Garantir que existe um BusinessObjectDataSource com o mesmo nome
+  no Dictionary.
 
 ──────────────────────────────────────────────────────────────
 
 🔴 Ref-1 — MasterComponent inválido                           [ERRO]
 ──────────────────────────────────────────────────────────────
 O que é:
-  Bandas de detalhe (DataBand filhas) precisam apontar para uma banda
-  mestre via MasterComponent. Se o nome referenciado não existe no
-  relatório, a banda filha é ignorada na renderização.
-
-Por que é perigoso:
-  Dados que deveriam aparecer simplesmente não aparecem. Sem erro,
-  sem log — o relatório gera em branco naquela seção.
+  DataBand filha aponta para uma banda mestre via MasterComponent.
+  Se o nome não existe, a banda filha é ignorada.
 
 Como corrigir:
-  Corrigir o valor de MasterComponent para o Name exato da banda mestre.
+  Corrigir MasterComponent para o Name exato da banda mestre.
 
 ──────────────────────────────────────────────────────────────
 
-🔴 Code-2 — Cast direto em Row[] sem verificação de nulo      [ERRO]
+🔴 Code-2 — Cast direto em Row[] ou .Value sem HasValue       [ERRO]
 ──────────────────────────────────────────────────────────────
 O que é:
-  Acessar um campo do banco de dados via Row["Campo"] retorna object.
-  Fazer cast direto como (Boolean)Row["Campo"] ou
-  (DateTime)Row["Campo"] lança InvalidCastException se o campo vier
-  nulo do banco.
+  Acessar Row["Campo"] retorna object. Cast direto como
+  (Boolean)Row["Campo"] lança InvalidCastException se DBNull.
+  Acessar .Value em Nullable sem HasValue lança
+  InvalidOperationException — trava o relatório.
 
-Por que é perigoso:
-  Campos anuláveis no banco (nullable) podem vir DBNull.Value.
-  O cast direto quebra o relatório inteiro nesse caso — nenhuma
-  linha é renderizada a partir do ponto do erro.
+Detecta QUALQUER value type (int, decimal, struct personalizado,
+  etc.), não só os tipos conhecidos.
 
-Exemplo do problema:
+Exemplos que TRAVAM o relatório:
   bool ativo = (Boolean)Row["Ativo"];
-  → se Ativo for null no banco → InvalidCastException → PDF em branco
+  var data = ((DateTime?)Row["Data"]).Value;  // sem HasValue!
 
 Como corrigir:
   Usar Convert ou verificação de nulo:
-  bool ativo = Row["Ativo"] != DBNull.Value && (Boolean)Row["Ativo"];
-  // ou
   bool ativo = Convert.ToBoolean(Row["Ativo"] ?? false);
 
 ──────────────────────────────────────────────────────────────
@@ -131,133 +120,76 @@ Como corrigir:
 🔴 Code-3 — Métodos obrigatórios ausentes no ScriptText      [ERRO]
 ──────────────────────────────────────────────────────────────
 O que é:
-  Todo relatório deve conter um conjunto de métodos utilitários do
-  template padrão, usados para formatação de documentos (CPF, CNPJ,
-  etc.) de forma consistente em toda a organização.
-
-Métodos obrigatórios:
+  O relatório deve conter os métodos utilitários do template padrão:
   • AplicarMascaraDeDocumento
   • ExtrairCaracteresNumericos
   • AplicarMascaraDeCNPJ
   • AplicarMascaraDeCPF
 
-Por que é erro:
-  Se um relatório não contém esses métodos, foi criado fora do
-  template padrão. Formatações de CPF e CNPJ podem estar ausentes
-  ou implementadas de forma inconsistente. Outros relatórios que
-  chamem esses métodos pelo nome vão quebrar em runtime.
-
-Como corrigir:
-  Copiar os métodos utilitários do ScriptText do template padrão
-  para o ScriptText deste relatório.
-
-═════════════════════════════════════════════════════════════
+Se ausentes, o relatório foi criado fora do template padrão.
 
 🟡 AVISOS — comportamento inesperado em runtime
 ═════════════════════════════════════════════════════════════
 
 🟡 Format-1 — Formatação incorreta ou ausente                [AVISO]
 ──────────────────────────────────────────────────────────────
-O que é:
-  TextObjects que exibem campos Decimal ou DateTime devem ter o
-  atributo Format configurado corretamente. Sem ele, o FastReport
-  exibe o valor no formato padrão do sistema operacional — que pode
-  ser diferente do esperado dependendo da máquina onde o relatório
-  é gerado.
+Decimal sem Format="Currency" ou DateTime sem Format="Date".
+O valor aparece no formato do SO, que pode variar por máquina.
 
-Casos detectados:
-  • Campo Decimal sem Format → exibe sem símbolo de moeda e sem
-    casas decimais fixas
-  • Campo Decimal com Format de data ou booleano → dado exibido
-    de forma completamente errada
-  • Campo DateTime sem Format → exibe data e hora juntos no
-    formato do SO (pode vir MM/dd/yyyy em máquinas em inglês)
-  • Campo DateTime com Format de moeda ou número → dado errado
-
-Como corrigir:
-  Para Decimal:
-    Format="Currency" Format.DecimalDigits="2" Format.UseLocale="true"
-  Para DateTime:
-    Format="Date"
-    (Format.Pattern é opcional — o padrão dd/MM/yyyy é aplicado
-    automaticamente pelo FastReport quando omitido)
+Correção:
+  Decimal:  Format="Currency" Format.DecimalDigits="2"
+  DateTime: Format="Date"
 
 ──────────────────────────────────────────────────────────────
 
 🟡 Expr-1 — Campo ausente no schema                          [AVISO]
 ──────────────────────────────────────────────────────────────
-O que é:
-  Expressões nos TextObjects seguem o padrão [Dados.Entidade.Campo].
-  Se o campo referenciado não existe no Dictionary do relatório,
-  o FastReport renderiza o campo vazio ou lança exceção em runtime.
-
-Por que é perigoso:
-  O campo aparece em branco no PDF sem nenhum aviso. Em casos mais
-  graves, o relatório inteiro para de renderizar.
-
-Como corrigir:
-  Verificar o nome exato do campo no Dictionary do FastReport Designer
-  e corrigir a expressão no TextObject.
-
-═════════════════════════════════════════════════════════════
-
-🔵 INFO — pontos de atenção para revisão
-═════════════════════════════════════════════════════════════
-
-🔵 Ref-3 — Evento sem método no ScriptText                    [INFO]
-──────────────────────────────────────────────────────────────
-O que é:
-  Componentes do FastReport (TextObject, DataBand, etc.) podem disparar
-  eventos C# em momentos específicos da renderização, como BeforePrint
-  (antes de imprimir o componente) e AfterData (após processar os dados).
-  Esses eventos referenciam métodos pelo nome — se o método não existe
-  no ScriptText, o evento nunca é executado.
-
-O que pode acontecer:
-  O FastReport não lança erro quando o método está ausente. O relatório
-  gera normalmente, mas a lógica do evento (visibilidade condicional,
-  formatação, cálculos) é silenciosamente ignorada.
-
-Exemplo do problema:
-  TextObject com AfterDataEvent="CalcularTotal"
-  → método CalcularTotal não existe no ScriptText
-  → o campo nunca é formatado
-
-Como corrigir:
-  Criar o método no ScriptText, ou remover o atributo do componente
-  se o evento não for mais necessário.
+TextObjects com [Dados.Entidade.Campo] onde o campo não existe
+no Dictionary.
 
 ──────────────────────────────────────────────────────────────
 
-🔵 Code-4 — AfterData modificando componente diferente        [INFO]
+🟡 Expr-2 — Campo não escalar em expressão                   [AVISO]
 ──────────────────────────────────────────────────────────────
-O que é:
-  Por convenção, o método "Text1_AfterData" é o evento AfterData
-  do componente "Text1" — ele normalmente modifica apenas as
-  propriedades do próprio Text1. Se dentro desse método o código
-  modifica "Text3.Text" ou "Text3.Visible", o revisor sinaliza
-  para que a intenção seja verificada.
+Expressão [Dados.X] referencia um campo com DataType="null"
+(objeto não escalar). Deveria ser [Dados.X.Propriedade].
 
-Quando é intencional:
-  Há casos legítimos em que um componente controla a visibilidade
-  de outro — por exemplo, Text1_AfterData ocultando um separador
-  visual adjacente. Nesses casos, o aviso pode ser ignorado.
+──────────────────────────────────────────────────────────────
 
-Quando indica um problema:
-  O método foi vinculado ao componente errado ou copiado de outro
-  componente sem ajustar os nomes. O componente real nunca recebe
-  o valor, enquanto outro componente recebe um valor incorreto.
+🟡 Ref-10 — Colchetes desbalanceados no Text                 [AVISO]
+──────────────────────────────────────────────────────────────
+Número de [ diferente de ] no atributo Text do TextObject.
+A expressão não resolve e vira texto literal.
 
-Exemplo:
-  private void Text1_AfterData(object sender, EventArgs e)
-  {
-      Text3.Text = "valor";  // intencional ou engano?
-  }
+──────────────────────────────────────────────────────────────
 
-Como avaliar:
-  Verificar se a modificação em outro componente é deliberada.
-  Se for engano, corrigir para Text1.Text ou mover a lógica para
-  o método AfterData do componente pretendido.
+🟡 Format-6 — Tags HTML sem HtmlTags ativado                 [AVISO]
+──────────────────────────────────────────────────────────────
+TextObject contém <b>, <i> etc. mas TextRenderType não é
+"HtmlTags". As tags aparecem como texto literal.
+
+──────────────────────────────────────────────────────────────
+
+🟡 Code-4 — CNPJ alfanumérico                                 [AVISO]
+──────────────────────────────────────────────────────────────
+O CNPJ pode conter letras. Detecta validações no ScriptText
+(Length==14, \d{14}), máscaras ##.###.###/####-## e campos
+numéricos no Dictionary — todos precisam ser revisados.
+
+──────────────────────────────────────────────────────────────
+
+🟡 Format-7 — Barcode sem Checksum=false                     [AVISO]
+──────────────────────────────────────────────────────────────
+BarcodeObject com Barcode.CalcCheckSum diferente de "false".
+Checksum habilitado pode gerar códigos de barras inválidos
+para leitura.
+
+──────────────────────────────────────────────────────────────
+
+🟡 Ref-12 — CanGrow inconsistente banda vs TextObject        [AVISO]
+──────────────────────────────────────────────────────────────
+TextObject com CanGrow=true mas a banda pai não. O texto
+cresce e sobrepõe componentes abaixo.
 """;
 
     private static string GetGlossarioContent() =>

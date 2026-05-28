@@ -150,33 +150,57 @@ Exemplo:
 
 ---
 
-### Ref-3 — Evento sem método no ScriptText
+### Format-6 — Tags HTML sem HtmlTags ativado
 
 ```
-1. Parseia o ScriptText com Roslyn → extrai todos os nomes de métodos
-2. Varre todos os atributos que terminam em "Event" em qualquer elemento
-3. Filtra os que referenciam métodos ausentes
-4. Agrupa os inválidos por nome do método ausente → conta afetados por grupo
-5. Para cada ocorrência: se o grupo tem N > 1 componentes, inclui no Detail
-   "N componentes referenciam este método ausente"
+1. Para cada TextObject com atributo Text:
+2.   Aplica regex em busca de tags HTML (<b>, <i>, <u>, <font>, <div>, <p>, etc.)
+3.   Se encontrou tags E o atributo TextRenderType NÃO é "HtmlTags" → Aviso
 ```
 
-Funciona com qualquer evento: `BeforePrintEvent`, `AfterDataEvent`, etc.
-O agrupamento no Detail ajuda a priorizar correções — um único método ausente
-pode resolver múltiplos erros de uma vez.
+Tags HTML sem `TextRenderType="HtmlTags"` são exibidas como texto literal.
 
----
+```xml
+<TextObject Text="&lt;b&gt;Nome:&lt;/b&gt; [Dados.X]" .../>
+<!-- sem TextRenderType="HtmlTags" → Format-6 Warning -->
+```
 
-### Code-2 — Cast direto em Row[] (Roslyn)
+### Ref-12 — CanGrow/CanShrink inconsistente entre TextObject e banda
+
+```
+1. Para cada TextObject com CanGrow="true" ou CanShrink="true":
+2.   Sobe na árvore até achar a DataBand/GroupHeader/ChildBand mais próxima
+3.   Se a banda não tem a mesma propriedade ativa → Aviso
+```
+
+Se o TextObject cresce mas a banda não, o texto extravasa e sobrepõe
+os componentes abaixo.
+
+```xml
+<DataBand Name="Data1" ...>                    <!-- sem CanGrow -->
+  <TextObject Name="Text1" CanGrow="true" .../> <!-- Ref-12 Warning -->
+</DataBand>
+```
+
+### Code-2 — Cast direto em Row[] + .Value sem HasValue (Roslyn semântico)
 
 ```
 1. Parseia ScriptText com Roslyn
-2. Navega DescendantNodes().OfType<CastExpressionSyntax>()
-3. Se o tipo do cast está em {Boolean, DateTime, Decimal, Double, Int32, Int64}
+2. Constrói CSharpCompilation + SemanticModel com referências básicas
+3. Navega DescendantNodes().OfType<CastExpressionSyntax>()
+4. Para cada cast, obtém o TypeInfo via SemanticModel.GetTypeInfo()
+5. Se o tipo resolvido é um value type (struct, primitivo, enum)
    E o operando contém "Row[" → Erro
+6. Navega DescendantNodes().OfType<MemberAccessExpressionSyntax>()
+7. Para cada acesso a ".Value" em expressão contendo "Row[":
+8.   Se o ancestral NÃO tem um MemberAccessExpressionSyntax ".HasValue"
+     (diferente do próprio .Value) → Erro
 ```
 
-Tipos seguros (string) e conversões explícitas (Convert.ToBoolean) não são detectados.
+Usa TypeInfo do SemanticModel, não lista fixa de tipos.
+Qualquer value type (int, decimal, struct personalizado) é detectado — sem falsos negativos.
+Tipos seguros como string (reference type) são automaticamente ignorados pelo mesmo motivo.
+Conversões seguras (Convert.ToBoolean, as? operator) não disparam o cast direto.
 
 ---
 
@@ -193,25 +217,7 @@ Tipos seguros (string) e conversões explícitas (Convert.ToBoolean) não são d
 
 ---
 
-### Code-4 — AfterData modificando componente diferente
 
-```
-1. Parseia ScriptText com Roslyn
-2. Encontra métodos cujo nome termina em "_AfterData" (case-insensitive)
-3. Para cada método, extrai o componente esperado:
-   "Text1_AfterData" → "Text1"
-4. Dentro do corpo, encontra atribuições AssignmentExpressionSyntax
-   onde Left é MemberAccessExpressionSyntax (Algo.Propriedade = ...)
-5. Se a propriedade está em {Text, Visible}
-   E o identificador à esquerda ≠ componente esperado
-   E não é expressão composta (sem "." ou "(")
-   → Info
-```
-
-Expressões compostas (`this.X`, `Report.FindObject(...)`) são ignoradas.
-Acesso indireto via variável intermediária não é detectado (limitação conhecida).
-
----
 
 ### Expr-1 — Campo ausente no schema
 
@@ -226,6 +232,46 @@ Acesso indireto via variável intermediária não é detectado (limitação conh
 
 Expressões com funções (parênteses no regex) são automaticamente ignoradas
 porque o character class `[^\]\[()]` rejeita `(`.
+
+---
+
+### Ref-10 — Colchetes desbalanceados
+
+```
+1. Para cada TextObject com atributo Text:
+2.   Conta quantos '[' e quantos ']' existem no valor
+3.   Se a contagem difere → Aviso
+```
+
+Exemplo:
+```xml
+<TextObject Text="[Dados.Apontamentos.Valor" .../>
+<!-- 1 abre, 0 fecha → Ref-10 Warning -->
+```
+
+---
+
+### Expr-2 — Campo não escalar em expressão
+
+```
+1. Constrói mapa caminho→DataType via SchemaBuilder (mesmo hashSet do Expr-1)
+2. Filtra apenas campos com DataType vazio (= "null" no XML)
+3. Para cada TextObject com [Dados.X.Y]:
+4.   Se o campo está no filtro → Aviso
+```
+
+Campos com `DataType="null"` são objetos intermediários (não escalares).
+Exibi-los como texto não funciona em runtime.
+
+Exemplo:
+```xml
+<Column Name="Endereco" DataType="null">
+  <Column Name="Cep" DataType="System.String"/>
+</Column>
+
+<TextObject Text="[Dados.Pessoa.Endereco]" .../>
+<!-- Endereco é objeto, não string → Expr-2 Warning -->
+<!-- Correto: [Dados.Pessoa.Endereco.Cep] -->
 
 ---
 
@@ -268,7 +314,7 @@ public enum Severity { Error, Warning, Info }
 
 public class RuleResult
 {
-    public string RuleCode      { get; set; }   // "Ref-3", "Code-1", etc.
+    public string RuleCode      { get; set; }   // "Ref-1", "Code-2", etc.
     public Severity Severity    { get; set; }   // Error, Warning, Info
     public string ComponentName { get; set; }   // Nome do elemento afetado
     public string Message       { get; set; }   // Descrição curta

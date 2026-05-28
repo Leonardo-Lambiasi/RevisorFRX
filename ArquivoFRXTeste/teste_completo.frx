@@ -21262,6 +21262,15 @@
     <DataBand Name="TesteRef2_DataSourceInvalido" Width="1047.06" Height="18.9" DataSource="FonteInexistente">
       <TextObject Name="TextTesteRef2" Width="300" Height="18.9" Text="Teste Ref-2: DataSource não declarado" Font="Arial, 9pt"/>
     </DataBand>
+    <DataBand Name="TesteExpr2_DataTypeNulo" Width="1047.06" Height="18.9" DataSource="Apontamentos">
+      <TextObject Name="TextTesteExpr2" Width="300" Height="18.9" Text="[Dados.DadosDoCartorio]" Font="Arial, 9pt"/>
+    </DataBand>
+    <DataBand Name="TesteRef10_ColchetesQuebrados" Width="1047.06" Height="18.9" DataSource="Apontamentos">
+      <TextObject Name="TextTesteRef10" Width="300" Height="18.9" Text="Valor: [Dados.Apontamentos.Valor" Font="Arial, 9pt"/>
+    </DataBand>
+    <DataBand Name="TesteFormat6_HtmlSemTag" Width="1047.06" Height="18.9" DataSource="Apontamentos">
+      <TextObject Name="TextTesteFormat6" Width="300" Height="18.9" Text="&lt;b&gt;Nome:&lt;/b&gt; [Dados.Apontamentos.Titulo.Especie.Sigla]" Font="Arial, 9pt"/>
+    </DataBand>
   </ReportPage>
   <ReportPage Name="Page2" Watermark.Font="Arial, 60pt">
     <DataBand Name="Data2" Width="718.2" Height="18.9" DataSource="BusinessObjectDataSource659">
@@ -21298,6 +21307,19 @@ namespace FastReport
     {
       bool ativo = Convert.ToBoolean(Row["Ativo"] ?? false);
       string nome = (string)Row["Nome"];
+    }
+
+    // ── Code-2 (Error): .Value em Nullable de Row[] sem HasValue
+    private void TesteCode2Nullable(object sender, EventArgs e)
+    {
+      var data = ((DateTime?)Row["DataDeVencimento"]).Value;
+      var valor = ((Nullable<Decimal>)Row["Valor"]).Value;
+    }
+
+    // ── Code-2 negativo: valor padrão com GetValueOrDefault seguro — NÃO detectar
+    private void TesteCode2Seguro2(object sender, EventArgs e)
+    {
+      var data = ((DateTime?)Row["Data"]).GetValueOrDefault(DateTime.Today);
     }
 
     // ── Code-3 (Error): os 4 métodos obrigatórios (AplicarMascaraDeDocumento,

@@ -1,3 +1,4 @@
+using System.Threading;
 using RevisorFRX.Core.Models;
 using RevisorFRX.Core.Services;
 
@@ -6,7 +7,10 @@ namespace RevisorFRX.App;
 public class MainForm : Form
 {
     private string? _selectedFilePath;
+    private string? _selectedFolderPath;
     private List<RuleResult> _results = new();
+    private RuleConfig _ruleConfig = RuleConfig.DefaultUI();
+    private CancellationTokenSource? _cts;
 
     private readonly Label _fileLabel;
     private readonly Button _analyzeButton;
@@ -17,6 +21,8 @@ public class MainForm : Form
     private readonly DataGridView _grid;
     private readonly Button _exportButton;
     private readonly Button _btnAjuda;
+    private readonly Button _btnConfig;
+    private readonly ToolTip _toolTip = new();
 
     public MainForm()
     {
@@ -48,6 +54,23 @@ public class MainForm : Form
             AutoSize = true,
             ForeColor = Color.Gray
         };
+
+        _btnConfig = new Button
+        {
+            Text = "⚙",
+            Location = new Point(706, 16),
+            Size = new Size(28, 28),
+            Font = new Font("Segoe UI", 12),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(108, 117, 125),
+            ForeColor = Color.White,
+            Cursor = Cursors.Hand,
+            UseVisualStyleBackColor = false,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right
+        };
+        _btnConfig.FlatAppearance.BorderSize = 0;
+        _btnConfig.Click += BtnConfig_Click;
+        _toolTip.SetToolTip(_btnConfig, "Configurar regras ativas");
 
         _btnAjuda = new Button
         {
@@ -84,16 +107,30 @@ public class MainForm : Form
         {
             Text = "Nenhum arquivo selecionado",
             Location = new Point(210, 87),
-            Size = new Size(450, 18),
+            Size = new Size(300, 18),
             ForeColor = Color.Gray,
             AutoEllipsis = true,
             TextAlign = ContentAlignment.MiddleLeft
         };
 
+        var batchButton = new Button
+        {
+            Text = "Selecionar pasta",
+            Location = new Point(520, 80),
+            Size = new Size(145, 30),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(108, 117, 125),
+            ForeColor = Color.White,
+            Cursor = Cursors.Hand,
+            UseVisualStyleBackColor = false
+        };
+        batchButton.FlatAppearance.BorderSize = 0;
+        batchButton.Click += BatchButton_Click;
+
         _analyzeButton = new Button
         {
             Text = "Analisar",
-            Location = new Point(666, 80),
+            Location = new Point(675, 80),
             Size = new Size(102, 30),
             Enabled = false,
             FlatStyle = FlatStyle.Flat,
@@ -157,8 +194,9 @@ public class MainForm : Form
         _grid.Columns.AddRange(
             new DataGridViewTextBoxColumn { Name = "Regra",      HeaderText = "Regra",      Width = 75  },
             new DataGridViewTextBoxColumn { Name = "Severidade", HeaderText = "Severidade", Width = 85  },
-            new DataGridViewTextBoxColumn { Name = "Componente", HeaderText = "Componente", Width = 150 },
-            new DataGridViewTextBoxColumn { Name = "Mensagem",   HeaderText = "Mensagem",   Width = 235 },
+            new DataGridViewTextBoxColumn { Name = "Arquivo",    HeaderText = "Arquivo",    Width = 130 },
+            new DataGridViewTextBoxColumn { Name = "Componente", HeaderText = "Componente", Width = 130 },
+            new DataGridViewTextBoxColumn { Name = "Mensagem",   HeaderText = "Mensagem",   Width = 200 },
             new DataGridViewTextBoxColumn { Name = "Detalhe",    HeaderText = "Detalhe",    AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill }
         );
 
@@ -180,8 +218,8 @@ public class MainForm : Form
 
         Controls.AddRange(new Control[]
         {
-            titleLabel, subtitleLabel, _btnAjuda,
-            selectButton, _fileLabel, _analyzeButton,
+            titleLabel, subtitleLabel, _btnConfig, _btnAjuda,
+            selectButton, batchButton, _fileLabel, _analyzeButton,
             separator, _badgePanel, _grid, _exportButton
         });
 
@@ -218,7 +256,25 @@ public class MainForm : Form
         if (dialog.ShowDialog() == DialogResult.OK)
         {
             _selectedFilePath = dialog.FileName;
+            _selectedFolderPath = null;
             _fileLabel.Text = Path.GetFileName(_selectedFilePath);
+            _fileLabel.ForeColor = Color.FromArgb(33, 37, 41);
+            _analyzeButton.Enabled = true;
+        }
+    }
+
+    private void BatchButton_Click(object? sender, EventArgs e)
+    {
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = "Selecionar pasta com arquivos .frx",
+            UseDescriptionForTitle = true
+        };
+        if (dialog.ShowDialog() == DialogResult.OK)
+        {
+            _selectedFolderPath = dialog.SelectedPath;
+            _selectedFilePath = null;
+            _fileLabel.Text = $"Pasta: {_selectedFolderPath}";
             _fileLabel.ForeColor = Color.FromArgb(33, 37, 41);
             _analyzeButton.Enabled = true;
         }
@@ -226,27 +282,43 @@ public class MainForm : Form
 
     private async void AnalyzeButton_Click(object? sender, EventArgs e)
     {
+        if (_cts != null)
+        {
+            _cts.Cancel();
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(_selectedFolderPath))
+        {
+            await AnalisarPasta();
+            return;
+        }
+
         if (string.IsNullOrEmpty(_selectedFilePath)) return;
+
+        IniciarModoAnalise();
 
         try
         {
-            _analyzeButton.Enabled = false;
-            _analyzeButton.Text = "Analisando...";
-            Cursor = Cursors.WaitCursor;
-
-            var content = File.ReadAllText(_selectedFilePath);
+            var content = await File.ReadAllTextAsync(_selectedFilePath, _cts!.Token);
             if (string.IsNullOrWhiteSpace(content))
             {
                 MessageBox.Show("O arquivo selecionado está vazio.", "RevisorFRX",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            _results = await Task.Run(() => new FrxAnalyzer().Analyze(content));
+            _results = await Task.Run(() => new FrxAnalyzer().Analyze(content, _ruleConfig), _cts.Token);
+            _cts.Token.ThrowIfCancellationRequested();
+            var fileName = Path.GetFileName(_selectedFilePath!);
+            foreach (var r in _results) r.FileName = fileName;
 
             PopulateGrid();
             UpdateBadges();
             _badgePanel.Visible = true;
             _exportButton.Visible = true;
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (Exception ex)
         {
@@ -255,10 +327,117 @@ public class MainForm : Form
         }
         finally
         {
-            _analyzeButton.Enabled = true;
-            _analyzeButton.Text = "Analisar";
-            Cursor = Cursors.Default;
+            FinalizarModoAnalise();
         }
+    }
+
+    private async Task AnalisarPasta()
+    {
+        IniciarModoAnalise();
+
+        try
+        {
+            var arquivos = Directory.GetFiles(_selectedFolderPath!, "*.frx");
+            if (arquivos.Length == 0)
+            {
+                MessageBox.Show("Nenhum arquivo .frx encontrado na pasta.", "RevisorFRX",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var todosResultados = new Dictionary<string, List<RuleResult>>();
+            var token = _cts!.Token;
+
+            foreach (var path in arquivos.OrderBy(f => f))
+            {
+                if (token.IsCancellationRequested) break;
+
+                try
+                {
+                    var content = await File.ReadAllTextAsync(path, token);
+                    var resultados = await Task.Run(() => new FrxAnalyzer().Analyze(content, _ruleConfig), token);
+                    token.ThrowIfCancellationRequested();
+                    var nomeArquivo = Path.GetFileName(path);
+                    foreach (var r in resultados) r.FileName = nomeArquivo;
+                    todosResultados[nomeArquivo] = resultados;
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    var nomeArquivo = Path.GetFileName(path);
+                    var erro = new RuleResult
+                    {
+                        RuleCode = "ERRO", Severity = Severity.Error,
+                        ComponentName = "", Message = $"Falha ao analisar: {ex.Message}",
+                        FileName = nomeArquivo
+                    };
+                    todosResultados[nomeArquivo] = new List<RuleResult> { erro };
+                }
+            }
+
+            if (todosResultados.Count == 0) return;
+
+            _results = todosResultados.Values.SelectMany(r => r).ToList();
+
+            _grid.Rows.Clear();
+
+            foreach (var (nomeArquivo, resultados) in todosResultados.OrderBy(e => e.Key))
+            {
+                foreach (var r in resultados.OrderBy(r => r.Severity).ThenBy(r => r.RuleCode))
+                {
+                    var idx = _grid.Rows.Add(r.RuleCode, r.Severity, nomeArquivo, r.ComponentName, r.Message, r.Detail);
+                    _grid.Rows[idx].DefaultCellStyle.BackColor = r.Severity switch
+                    {
+                        Severity.Error   => Color.FromArgb(255, 220, 220),
+                        Severity.Warning => Color.FromArgb(255, 243, 205),
+                        Severity.Info    => Color.FromArgb(207, 226, 255),
+                        _                => Color.White
+                    };
+                }
+            }
+
+            var totalE = todosResultados.Values.Sum(r => r.Count(x => x.Severity == Severity.Error));
+            var totalW = todosResultados.Values.Sum(r => r.Count(x => x.Severity == Severity.Warning));
+            var totalI = todosResultados.Values.Sum(r => r.Count(x => x.Severity == Severity.Info));
+
+            _errorsLabel.Text   = $"{totalE} Erro{(totalE != 1 ? "s" : "")}";
+            _warningsLabel.Text = $"{totalW} Aviso{(totalW != 1 ? "s" : "")}";
+            _infoLabel.Text     = $"{totalI} Info";
+            _badgePanel.Visible = true;
+            _exportButton.Visible = true;
+            _grid.Refresh();
+        }
+        finally
+        {
+            FinalizarModoAnalise();
+        }
+    }
+
+    private void IniciarModoAnalise()
+    {
+        _cts = new CancellationTokenSource();
+        _analyzeButton.Text = "Cancelar";
+        _analyzeButton.BackColor = Color.FromArgb(220, 53, 69);
+        _analyzeButton.ForeColor = Color.White;
+        _analyzeButton.Enabled = true;
+        Cursor = Cursors.WaitCursor;
+        _grid.Rows.Clear();
+        _badgePanel.Visible = false;
+        _exportButton.Visible = false;
+    }
+
+    private void FinalizarModoAnalise()
+    {
+        _cts?.Dispose();
+        _cts = null;
+        _analyzeButton.Text = "Analisar";
+        _analyzeButton.BackColor = Color.FromArgb(25, 135, 84);
+        _analyzeButton.ForeColor = Color.White;
+        _analyzeButton.Enabled = true;
+        Cursor = Cursors.Default;
     }
 
     private void PopulateGrid()
@@ -266,7 +445,7 @@ public class MainForm : Form
         _grid.Rows.Clear();
         foreach (var r in _results)
         {
-            var idx = _grid.Rows.Add(r.RuleCode, r.Severity, r.ComponentName, r.Message, r.Detail);
+            var idx = _grid.Rows.Add(r.RuleCode, r.Severity, r.FileName, r.ComponentName, r.Message, r.Detail);
             _grid.Rows[idx].DefaultCellStyle.BackColor = r.Severity switch
             {
                 Severity.Error   => Color.FromArgb(255, 220, 220),
@@ -290,7 +469,11 @@ public class MainForm : Form
     private void ExportButton_Click(object? sender, EventArgs e)
     {
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var baseName = Path.GetFileNameWithoutExtension(_selectedFilePath ?? "relatorio");
+        var baseName = _selectedFilePath != null
+            ? Path.GetFileNameWithoutExtension(_selectedFilePath)
+            : _selectedFolderPath != null
+                ? Path.GetFileName(_selectedFolderPath)
+                : "relatorio";
         var suggestedName = $"RevisorFRX_{baseName}_{timestamp}.csv";
 
         using var dialog = new SaveFileDialog
@@ -309,12 +492,13 @@ public class MainForm : Form
     private static void ExportarCsv(List<RuleResult> results, string filePath)
     {
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Regra;Severidade;Componente;Mensagem;Detalhe");
+        sb.AppendLine("Arquivo;Regra;Severidade;Componente;Mensagem;Detalhe");
 
         foreach (var r in results)
         {
             var linha = string.Join(";", new[]
             {
+                Escapar(r.FileName),
                 Escapar(r.RuleCode),
                 Escapar(r.Severity.ToString()),
                 Escapar(r.ComponentName),
@@ -333,6 +517,25 @@ public class MainForm : Form
         if (valor.Contains(';') || valor.Contains('"') || valor.Contains('\n'))
             return $"\"{valor.Replace("\"", "\"\"")}\"";
         return valor;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _toolTip.Dispose();
+            _cts?.Dispose();
+        }
+        base.Dispose(disposing);
+    }
+
+    private void BtnConfig_Click(object? sender, EventArgs e)
+    {
+        using var configForm = new ConfigForm(_ruleConfig);
+        if (configForm.ShowDialog(this) == DialogResult.OK)
+        {
+            _ruleConfig = configForm.Config;
+        }
     }
 
     private void BtnAjuda_Click(object? sender, EventArgs e)
