@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp">
+  <Dictionary>
+    <BusinessObjectDataSource Name="Dados" DataType="null" Enabled="true">
+      <Column Name="Cartorio" DataType="null">
+        <Column Name="Codigo" DataType="System.Int32"/>
+        <Column Name="Nome" DataType="System.String"/>
+        <Column Name="Enderecos" DataType="null">
+          <Column Name="Rua" DataType="System.String"/>
+          <Column Name="Cep" DataType="System.String"/>
+        </Column>
+      </Column>
+      <Column Name="Protesto" DataType="null">
+        <Column Name="Data" DataType="System.DateTime"/>
+        <Column Name="Valor" DataType="System.Decimal"/>
+      </Column>
+    </BusinessObjectDataSource>
+  </Dictionary>
+  <ReportPage>
+    <DataBand Name="DataBand1" DataSource="Dados">
+      <TextObject Name="TxtCodigo" Text="[Dados.Cartorio.Codigo]"/>
+      <TextObject Name="TxtNome" Text="[Dados.Cartorio.Nome]"/>
+      <TextObject Name="TxtRua" Text="[Dados.Cartorio.Enderecos.Rua]"/>
+      <TextObject Name="TxtCep" Text="[Dados.Cartorio.Enderecos.Cep]"/>
+      <TextObject Name="TxtProtesto" Text="[Dados. Protesto .Data]"/>
+      <TextObject Name="TxtValor" Text="[Dados. Protesto .  Valor  ]"/>
+      <TextObject Name="TxtInexistente" Text="[Dados.Cartorio.NaoExiste]"/>
+      <TextObject Name="TxtNaoEscalar" Text="[Dados.Cartorio]"/>
+      <TextObject Name="TxtDesbalanceado" Text="Preco: [[Dados.Cartorio.Codigo + [taxa]"/>
+      <TextObject Name="TxtMatematico" Text="[[Dados.Cartorio.Nome] + [Dados.Protesto.Data]]"/>
+    </DataBand>
+  </ReportPage>
+</Report>

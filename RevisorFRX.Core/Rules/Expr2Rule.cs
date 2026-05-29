@@ -34,7 +34,7 @@ public class Expr2Rule
             {
                 if (match.Index > 0 && textValue[match.Index - 1] == '[') continue;
 
-                var caminho = match.Groups[1].Value.Trim();
+                var caminho = match.Groups[1].Value.Replace(" ", "");
 
                 if (caminho.Contains('(') || caminho.Contains(',')) continue;
 
@@ -47,7 +47,7 @@ public class Expr2Rule
                         ComponentName = texto.Attribute("Name")?.Value ?? "TextObject",
                         Message = $"Campo '[Dados.{caminho}]' tem DataType nulo e não pode ser exibido como texto.",
                         Detail = $"O campo '{caminho}' é um objeto não escalar (DataType=\"null\"). " +
-                                 "Referencie uma propriedade filha dele, ex: '[Dados.{caminho}.Propriedade]'."
+                                 $"Referencie uma propriedade filha dele, ex: '[Dados.{caminho}.Propriedade]'."
                     });
                 }
             }

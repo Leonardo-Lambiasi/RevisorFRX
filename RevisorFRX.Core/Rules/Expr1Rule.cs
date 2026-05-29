@@ -33,7 +33,7 @@ public class Expr1Rule
                 // após o '[' externo está dentro de uma operação composta; ignorar.
                 if (match.Index > 0 && textValue[match.Index - 1] == '[') continue;
 
-                var caminho = match.Groups[1].Value.Trim();
+                var caminho = match.Groups[1].Value.Replace(" ", "");
 
                 // Filtro defensivo extra: se sobrou parêntese ou vírgula é função
                 if (caminho.Contains('(') || caminho.Contains(',')) continue;

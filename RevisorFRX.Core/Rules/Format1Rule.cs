@@ -45,7 +45,7 @@ public class Format1Rule
             {
                 if (match.Index > 0 && text[match.Index - 1] == '(') continue;
 
-                var caminho = match.Groups[1].Value.Trim();
+                var caminho = match.Groups[1].Value.Replace(" ", "");
                 if (!schema.TryGetValue(caminho, out var dataType)) continue;
 
                 var isDecimal = dataType == "System.Decimal" ||

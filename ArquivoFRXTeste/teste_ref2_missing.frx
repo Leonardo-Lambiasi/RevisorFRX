@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp">
+  <Dictionary>
+    <BusinessObjectDataSource Name="Dados" DataType="null" Enabled="true">
+      <Column Name="Nome" DataType="System.String"/>
+    </BusinessObjectDataSource>
+    <BusinessObjectDataSource Name="FonteDesativada" DataType="null" Enabled="false">
+      <Column Name="X" DataType="System.Int32"/>
+    </BusinessObjectDataSource>
+  </Dictionary>
+  <ReportPage>
+    <DataBand Name="BandOk" DataSource="Dados">
+      <TextObject Text="[Dados.Nome]"/>
+    </DataBand>
+    <DataBand Name="BandDesativada" DataSource="FonteDesativada"/>
+    <DataBand Name="BandInexistente" DataSource="DataSourceQueNaoExiste"/>
+    <DataBand Name="BandInexistente2" DataSource="OutraFonteInexistente"/>
+    <DataBand Name="BandVazia" DataSource=""/>
+    <Column Name="ColunaQualquer" DataSource="Dados"/>
+  </ReportPage>
+</Report>

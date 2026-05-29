@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp">
+  <Dictionary>
+    <BusinessObjectDataSource Name="Dados" DataType="null" Enabled="true">
+      <Column Name="Clientes" DataType="null">
+        <Column Name="Nome" DataType="System.String"/>
+        <Column Name="Cpf" DataType="System.String"/>
+      </Column>
+    </BusinessObjectDataSource>
+    <TableDataSource Name="TabelaSQL" DataType="null" Enabled="true">
+      <Column Name="Produto" DataType="System.String"/>
+      <Column Name="Preco" DataType="System.Decimal"/>
+    </TableDataSource>
+    <CsvDataSource Name="ArquivoCSV" DataType="null" Enabled="true">
+      <Column Name="Linha" DataType="System.Int32"/>
+    </CsvDataSource>
+    <ViewDataSource Name="VisaoDados" DataType="null" Enabled="true">
+      <Column Name="Total" DataType="System.Decimal"/>
+    </ViewDataSource>
+    <JsonDataSource Name="ApiResponse" DataType="null" Enabled="true">
+      <Column Name="Status" DataType="System.String"/>
+    </JsonDataSource>
+    <BusinessObjectDataSource Name="FonteDesativada" DataType="null" Enabled="false">
+      <Column Name="Ignorado" DataType="System.Int32"/>
+    </BusinessObjectDataSource>
+  </Dictionary>
+  <ReportPage>
+    <Band Name="PageHeader1">
+      <TextObject Name="TxtBusiness" Text="[Dados.Clientes.Nome]"/>
+      <TextObject Name="TxtTable" Text="[TabelaSQL.Produto]"/>
+      <TextObject Name="TxtCsv" Text="[ArquivoCSV.Linha]"/>
+      <TextObject Name="TxtView" Text="[VisaoDados.Total]"/>
+      <TextObject Name="TxtJson" Text="[ApiResponse.Status]"/>
+      <TextObject Name="TxtDesativada" Text="[FonteDesativada.Ignorado]"/>
+    </Band>
+    <DataBand Name="DataBusiness" DataSource="Dados"/>
+    <DataBand Name="DataTable" DataSource="TabelaSQL"/>
+    <DataBand Name="DataCsv" DataSource="ArquivoCSV"/>
+    <DataBand Name="DataView" DataSource="VisaoDados"/>
+    <DataBand Name="DataJson" DataSource="ApiResponse"/>
+    <DataBand Name="DataDesativada" DataSource="FonteDesativada"/>
+  </ReportPage>
+</Report>

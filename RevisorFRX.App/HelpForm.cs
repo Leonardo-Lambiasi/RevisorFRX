@@ -219,6 +219,12 @@ BusinessObjectDataSource
   aninhados — um pode conter outros como filhos, formando uma hierarquia
   que espelha o modelo de dados da aplicação.
 
+TableDataSource / CsvDataSource / ViewDataSource / JsonDataSource
+  Outros tipos de fonte de dados que o FastReport suporta. TableDataSource
+  para DataTables, CsvDataSource para arquivos CSV, ViewDataSource para
+  views de banco, JsonDataSource para APIs REST. O RevisorFRX detecta
+  todos eles ao validar referências.
+
 DataBand
   Banda de dados — a faixa do relatório que se repete para cada registro
   da fonte de dados. Se a fonte tem 100 registros, a DataBand renderiza
@@ -228,6 +234,12 @@ MasterComponent
   Propriedade de uma DataBand filha que aponta para a DataBand pai.
   Define a relação mestre-detalhe: para cada linha do mestre, a filha
   renderiza seus registros correspondentes.
+
+CanGrow / CanShrink
+  Propriedades que permitem um componente crescer ou encolher
+  verticalmente para acomodar seu conteúdo. Se um TextObject tem
+  CanGrow=true mas a DataBand pai não, o texto extravasa e sobrepõe
+  componentes abaixo. O RevisorFRX flagra essa inconsistência (Ref-12).
 
 BeforePrint / AfterData
   Eventos do ciclo de vida dos componentes FastReport.
@@ -247,6 +259,18 @@ DBNull.Value
   lança InvalidCastException. Sempre verificar antes do cast:
   if (Row["Campo"] != DBNull.Value) { ... }
 
+TextRenderType
+  Atributo do TextObject que define como o texto é interpretado.
+  "HtmlTags" permite usar tags HTML (<b>, <i>, <font>) no texto do
+  relatório. Sem esse atributo, as tags aparecem como texto literal.
+  O RevisorFRX flagra essa omissão (Format-6).
+
+Barcode.CalcCheckSum
+  Atributo do BarcodeObject que ativa o cálculo de dígito verificador.
+  Deve ser false para a maioria dos tipos de código de barras, pois
+  o checksum embutido pode gerar códigos inválidos para leitura.
+  O RevisorFRX verifica este atributo (Format-7).
+
 Roslyn
   Compilador C# da Microsoft usado internamente pelo RevisorFRX para
   analisar o ScriptText. Em vez de procurar padrões por texto (regex),
@@ -265,5 +289,18 @@ Format / Format.Pattern
   (ex: "dd/MM/yyyy"). Sem esses atributos, o FastReport usa o formato
   padrão do sistema operacional — que varia entre máquinas e pode
   gerar relatórios com datas em inglês ou valores sem símbolo de moeda.
+
+Schema Explorer
+  Ferramenta visual do RevisorFRX (botão 🔍) que exibe todos os campos
+  declarados no Dictionary do arquivo .frx. Permite pesquisar por nome,
+  filtrar por tipo de dado e entidade, ver quais campos são objetos não
+  escalares (DataType=null) e quais são efetivamente usados no relatório.
+  Duplo-clique copia o caminho completo para o clipboard.
+
+CNPJ Alfanumérico (IN 2117/2023)
+  A Receita Federal passou a permitir letras no CNPJ a partir de julho
+  de 2026. Validações que assumem apenas dígitos (\d{14}, Length==14)
+  e campos numéricos (Int64, Decimal) precisam ser revisados.
+  O RevisorFRX detecta esses padrões (Code-4).
 """;
 }

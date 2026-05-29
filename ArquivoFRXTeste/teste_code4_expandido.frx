@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp">
+  <ScriptText><![CDATA[
+    using System;
+    using System.Text.RegularExpressions;
+
+    bool ValidarCnpjDigitos(string cnpj) {
+        return Regex.IsMatch(cnpj, @"^\d{14}$");
+    }
+
+    bool ValidarDocumentoPorLength(string doc) {
+        return doc.Length == 14;
+    }
+
+    bool ValidarCnpjNumerico(string cgc) {
+        return Regex.IsMatch(cgc, "^[0-9]{14}$");
+    }
+
+    bool ValidarQualquerCoisa(string x) {
+        return Regex.IsMatch(x, @"^\d{14}$") && x.Length == 14;
+    }
+
+    void AplicarMascaraDeDocumento() { }
+    void ExtrairCaracteresNumericos() { }
+    void AplicarMascaraDeCNPJ() { }
+    void AplicarMascaraDeCPF() { }
+  ]]></ScriptText>
+  <Dictionary>
+    <BusinessObjectDataSource Name="Dados" DataType="null" Enabled="true">
+      <Column Name="Clientes" DataType="null">
+        <Column Name="CNPJ" DataType="System.Int64"/>
+        <Column Name="CPF" DataType="System.Decimal"/>
+        <Column Name="CNPJ_String" DataType="System.String"/>
+        <Column Name="CPF_String" DataType="System.String"/>
+        <Column Name="Documento" DataType="System.Int32"/>
+        <Column Name="CGC" DataType="System.Int64"/>
+      </Column>
+      <Column Name="Fornecedores" DataType="null">
+        <Column Name="CnpjMatriz" DataType="System.Decimal"/>
+      </Column>
+      <Column Name="SemCNPJ" DataType="null">
+        <Column Name="Nome" DataType="System.String"/>
+        <Column Name="Idade" DataType="System.Int32"/>
+      </Column>
+    </BusinessObjectDataSource>
+    <ViewDataSource Name="ViewResumo" DataType="null" Enabled="true">
+      <Column Name="TotalGeral" DataType="System.Decimal"/>
+    </ViewDataSource>
+    <JsonDataSource Name="JsonApi" DataType="null" Enabled="true">
+      <Column Name="StatusCode" DataType="System.Int32"/>
+    </JsonDataSource>
+  </Dictionary>
+  <ReportPage>
+    <Band Name="PageHeader1">
+      <TextObject Name="TextCnpjMascarado" Text="[Dados.Clientes.CNPJ]" Format="##.###.###/####-##"/>
+      <TextObject Name="TextCnpjLiteral" Text="##.###.###/####-##"/>
+      <TextObject Name="TextCnpjSimples" Text="[Dados.Clientes.CNPJ]"/>
+      <TextObject Name="TextNome" Text="[Dados.SemCNPJ.Nome]"/>
+      <TextObject Name="TextInexistente" Text="[Dados.Clientes.CampoQueNaoExiste]"/>
+      <TextObject Name="TextNaoEscalar" Text="[Dados.Clientes]"/>
+      <TextObject Name="TextHtml" Text="&lt;b&gt;CNPJ:&lt;/b&gt; [Dados.Clientes.CNPJ]"/>
+      <TextObject Name="TextBrackets" Text="CNPJ: [[Dados.Clientes.CNPJ]"/>
+    </Band>
+    <DataBand Name="BandView" DataSource="ViewResumo"/>
+    <DataBand Name="BandJson" DataSource="JsonApi"/>
+    <DataBand Name="BandFake" DataSource="ViewQueNaoExiste"/>
+  </ReportPage>
+</Report>

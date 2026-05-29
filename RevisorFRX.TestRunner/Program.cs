@@ -2,17 +2,30 @@ using RevisorFRX.Core.Models;
 using RevisorFRX.Core.Services;
 
 var cmdArgs = Environment.GetCommandLineArgs().Skip(1).ToArray();
-var baseDir = "/home/leonardo/Documentos/RevisorFRX/ArquivoFRXTeste";
+var baseDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "ArquivoFRXTeste");
 
 if (cmdArgs.Length == 0)
 {
     // Modo padrão: analisa arquivos fixos
-    Analisar("ARQUIVO ORIGINAL", Path.Combine(baseDir, "Títulos Fora da Comarca.frx"));
-    Analisar("TESTE COMPLETO (com casos injetados)", Path.Combine(baseDir, "teste_completo.frx"));
-    Analisar("TESTE CODE-4", Path.Combine(baseDir, "teste_code4.frx"));
-    Analisar("BOLETO DE PAGAMENTO", Path.Combine(baseDir, "Boleto de Pagamento (12).frx"));
-    Analisar("CERTIDÃO DE CANCELAMENTO", Path.Combine(baseDir, "Certidão de Cancelamento de Protesto (6).frx"));
-    Analisar("INTIMAÇÃO", Path.Combine(baseDir, "Intimação (1).frx"));
+    var arquivos = new (string Label, string Nome)[]
+    {
+        ("ARQUIVO ORIGINAL",             "Títulos Fora da Comarca.frx"),
+        ("TESTE COMPLETO (com casos injetados)", "teste_completo.frx"),
+        ("TESTE CODE-4",                 "teste_code4.frx"),
+        ("BOLETO DE PAGAMENTO",          "Boleto de Pagamento (12).frx"),
+        ("CERTIDÃO DE CANCELAMENTO",     "Certidão de Cancelamento de Protesto (6).frx"),
+        ("INTIMAÇÃO",                    "Intimação (1).frx"),
+    };
+    foreach (var (label, nome) in arquivos)
+    {
+        var path = Path.Combine(baseDir, nome);
+        if (!File.Exists(path))
+        {
+            Console.WriteLine($"\n  AVISO: Arquivo não encontrado — {path}");
+            continue;
+        }
+        Analisar(label, path);
+    }
 }
 else if (cmdArgs[0] is "--relatorio" or "-r")
 {

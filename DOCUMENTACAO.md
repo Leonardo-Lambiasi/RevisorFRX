@@ -16,19 +16,39 @@ RevisorFRX.App    →   Interface WinForms. Apenas chama o Core e exibe resultad
 Isso permite reutilizar o Core em outros contextos (CLI, testes, integração CI) sem
 arrastar dependências de interface.
 
-Dentro do Core, o helper `SchemaBuilder` é compartilhado entre `Expr1Rule` e `Format1Rule`:
+Dentro do Core existem dois helpers de schema independentes:
 
 ```
 SchemaBuilder.BuildTypeMap(doc)
     → Dictionary<string, string>   (caminho → DataType)
+    normaliza DataType="null" → ""
+    usado por: Expr1Rule (existência de campos) e Format1Rule (tipos formatáveis)
 
-Expr1Rule   usa as Keys como HashSet para verificar existência de campos
-Format1Rule filtra entradas com DataType preenchido para verificar formatação
+SchemaExtractor.Extract(doc)
+    → List<SchemaField>
+    preserva DataType="null" para detectar não-escalares
+    recursão nos filhos de Column (sub-colunas aninhadas)
+    enriquece com lista de TextObjects que referenciam cada campo
+    usado por: SchemaExplorerForm (visualização interativa do Dictionary)
+```
+
+`SchemaField` (modelo em `RevisorFRX.Core.Models`):
+```csharp
+EntityAlias       // Ex: "ItenPedido" ou "DadosDoCartorio.Endereco"
+FieldName         // Ex: "ValorTotal"
+DataType          // Ex: "System.Decimal" ou "null"
+FullPath          // → "[Dados.ItenPedido.ValorTotal]"
+DisplayType       // → "Decimal", "String", "⚠ null (objeto)", etc.
+IsNonScalar       // DataType == "null"
+UsedInComponents  // nomes dos TextObjects que referenciam este campo
+IsUsed            // UsedInComponents.Count > 0
 ```
 
 ---
 
 ## Fluxo de execução
+
+### Análise de regras
 
 ```
 Usuário clica "Analisar"
@@ -48,6 +68,30 @@ List<RuleResult>
        ▼
 MainForm.PopulateGrid()   ← volta para o thread de UI após await
 MainForm.UpdateBadges()
+```
+
+### Explorador de Schema
+
+```
+Usuário clica "🔍" (habilitado apenas com arquivo único selecionado)
+       │
+       ▼
+MainForm.BtnSchema_Click
+       │  File.ReadAllText(path)
+       │  XDocument.Parse(xml)
+       ▼
+SchemaExtractor.Extract(doc)
+       │  navega <Dictionary> (Alias-first, recursivo)
+       │  extrai List<SchemaField> com EntityAlias + FieldName + DataType
+       │  enriquece UsedInComponents via TextObject.Text
+       ▼
+List<SchemaField>
+       │
+       ▼
+SchemaExplorerForm(fields, fileName).ShowDialog()
+       │  filtros em tempo real (texto, tipo, entidade, null-only, used-only)
+       │  colorização por DataType
+       │  duplo-clique / botão copia FullPath para clipboard
 ```
 
 ---
@@ -217,8 +261,37 @@ Conversões seguras (Convert.ToBoolean, as? operator) não disparam o cast diret
 
 ---
 
+### Code-4 — CNPJ alfanumérico
 
+```
+1. VerificarScriptText: busca padrões no código C#:
+   a. Regex \d{14} ou [0-9]{14} → validação que rejeita letras
+   b. .Length == 14 ou .Count == 14 → contagem fixa que falha com letras
+2. VerificarTextObjects: busca máscara ##.###.###/####-## no Text ou Format
+3. VerificarDictionary: campos com nome contendo cnpj/cgc/cpf e tipo numérico
+```
 
+A IN 2117/2023 da Receita Federal permite letras no CNPJ.
+Validações que assumem apenas dígitos precisam ser revisadas.
+
+---
+
+### Format-7 — Barcode sem Checksum=false
+
+```
+1. Para cada BarcodeObject:
+2.   Lê atributo Barcode.CalcCheckSum
+3.   Se valor não é "false" → Aviso
+```
+
+Checksum habilitado pode gerar códigos de barras inválidos para leitura.
+
+```xml
+<BarcodeObject Name="Cod1" Barcode.CalcCheckSum="true" .../>
+<!-- → Format-7 Warning -->
+```
+
+---
 ### Expr-1 — Campo ausente no schema
 
 ```

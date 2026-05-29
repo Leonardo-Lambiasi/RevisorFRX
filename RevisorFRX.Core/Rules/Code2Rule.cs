@@ -56,13 +56,16 @@ public class Code2Rule
             {
                 var metodo = cast.Ancestors()
                     .OfType<MethodDeclarationSyntax>()
-                    .FirstOrDefault();
+                    .FirstOrDefault() as SyntaxNode
+                    ?? cast.Ancestors()
+                        .OfType<LocalFunctionStatementSyntax>()
+                        .FirstOrDefault();
 
                 results.Add(new RuleResult
                 {
                     RuleCode = "Code-2",
                     Severity = Severity.Error,
-                    ComponentName = metodo?.Identifier.Text ?? "ScriptText",
+                    ComponentName = GetMethodName(metodo),
                     Message = $"Cast direto ({tipoNome}) em acesso a Row[] sem verificação " +
                               $"de nulo — lança InvalidCastException se o campo for DBNull.",
                     Detail = $"Expressão: {cast}"
@@ -71,6 +74,15 @@ public class Code2Rule
         }
 
         return results;
+    }
+
+    private static string GetMethodName(SyntaxNode? node)
+    {
+        if (node is MethodDeclarationSyntax method)
+            return method.Identifier.Text;
+        if (node is LocalFunctionStatementSyntax local)
+            return local.Identifier.Text;
+        return "ScriptText";
     }
 
     private static void VerificarValueSemHasValue(
@@ -91,13 +103,16 @@ public class Code2Rule
         {
             var metodo = member.Ancestors()
                 .OfType<MethodDeclarationSyntax>()
-                .FirstOrDefault();
+                .FirstOrDefault() as SyntaxNode
+                ?? member.Ancestors()
+                    .OfType<LocalFunctionStatementSyntax>()
+                    .FirstOrDefault();
 
             results.Add(new RuleResult
             {
                 RuleCode = "Code-2",
                 Severity = Severity.Error,
-                ComponentName = metodo?.Identifier.Text ?? "ScriptText",
+                ComponentName = GetMethodName(metodo),
                 Message = $"Acesso a '.Value' em Nullable de Row[] sem verificação " +
                           $"de HasValue — lança InvalidOperationException se o campo for nulo.",
                 Detail = $"Expressão: {member}"

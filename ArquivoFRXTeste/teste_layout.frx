@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp">
+  <Dictionary>
+    <BusinessObjectDataSource Name="Dados" DataType="null" Enabled="true">
+      <Column Name="Item" DataType="System.String"/>
+      <Column Name="Descricao" DataType="System.String"/>
+      <Column Name="Preco" DataType="System.Decimal"/>
+    </BusinessObjectDataSource>
+  </Dictionary>
+  <ReportPage>
+    <DataBand Name="Data1" DataSource="Dados">
+      <TextObject Name="TxtOk" CanGrow="true" CanShrink="true" Text="[Dados.Item]"/>
+      <TextObject Name="TxtSemGrow" Text="[Dados.Descricao]"/>
+      <TextObject Name="TxtGrowSemBanda" CanGrow="true" Text="[Dados.Descricao]"/>
+      <TextObject Name="TxtDecimal" Text="[Dados.Preco]"/>
+      <TextObject Name="TxtBrackets" Text="Valor: [[Dados.Item]"/>
+    </DataBand>
+    <DataBand Name="Data2" CanGrow="true" DataSource="Dados">
+      <TextObject Name="TxtGrowOk" CanGrow="true" Text="[Dados.Item]"/>
+      <TextObject Name="TxtHtmlOk" Text="&lt;b&gt;Teste&lt;/b&gt;" TextRenderType="HtmlTags"/>
+      <TextObject Name="TxtHtml" Text="&lt;b&gt;Importante:&lt;/b&gt; [Dados.Descricao]"/>
+    </DataBand>
+  </ReportPage>
+</Report>

@@ -72,6 +72,20 @@ public class ConfigForm : Form
         btnDeselectAll.FlatAppearance.BorderSize = 0;
         btnDeselectAll.Click += (_, _) => SetAllChecked(false);
 
+        var btnRestaurar = new Button
+        {
+            Text = "Restaurar padrões",
+            Location = new Point(296, 60),
+            Size = new Size(130, 28),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(25, 135, 84),
+            ForeColor = Color.White,
+            Cursor = Cursors.Hand,
+            UseVisualStyleBackColor = false
+        };
+        btnRestaurar.FlatAppearance.BorderSize = 0;
+        btnRestaurar.Click += (_, _) => RestaurarPadroes();
+
         _ruleList = new CheckedListBox
         {
             Location = new Point(16, 96),
@@ -119,7 +133,7 @@ public class ConfigForm : Form
         Controls.AddRange(new Control[]
         {
             titleLabel, subtitleLabel,
-            btnSelectAll, btnDeselectAll,
+            btnSelectAll, btnDeselectAll, btnRestaurar,
             _ruleList, btnOk, btnCancel
         });
 
@@ -144,6 +158,13 @@ public class ConfigForm : Form
         var rules = RuleRegistry.GetAll();
         for (int i = 0; i < rules.Count; i++)
             _ruleList.SetItemChecked(i, _config.IsEnabled(rules[i].Code));
+    }
+
+    private void RestaurarPadroes()
+    {
+        var rules = RuleRegistry.GetAll();
+        for (int i = 0; i < rules.Count; i++)
+            _ruleList.SetItemChecked(i, rules[i].DefaultEnabled);
     }
 
     private void SetAllChecked(bool value)

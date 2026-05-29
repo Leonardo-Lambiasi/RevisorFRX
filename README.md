@@ -43,28 +43,48 @@ Todas as regras podem ser ativadas/desativadas individualmente pelo botão **⚙
 ## Interface
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  RevisorFRX                                              [⚙][?] │
-│  Análise estática de relatórios FastReport (.frx)             │
-│                                                               │
+┌──────────────────────────────────────────────────────────────────┐
+│  RevisorFRX                                          [🔍][⚙][?] │
+│  Análise estática de relatórios FastReport (.frx)                │
+│                                                                  │
 │  [Selecionar arquivo .frx]  NomeDoArquivo.frx  [Selecionar pasta] [Analisar] │
-│  ─────────────────────────────────────────────────────────── │
-│  [ 3 Erros ] [ 2 Avisos ] [ 0 Info ]                         │
-│                                                               │
-│  Regra   │ Severidade │ Arquivo    │ Componente │ Mensagem   │ Detalhe    │
-│  ────────┼────────────┼────────────┼────────────┼────────────┼─────────── │
-│  Ref-10  │ Warning    │ rel.frx    │ Text364    │ Colchetes  │ ...        │
-│  Ref-1   │ Error      │ rel.frx    │ SubReport1 │ Master...  │ ...        │
-│  ...                                                              │
-│                                                               │
-│  [Exportar relatório CSV]                                     │
-└──────────────────────────────────────────────────────────────┘
+│  ──────────────────────────────────────────────────────────────  │
+│  [ 3 Erros ] [ 2 Avisos ] [ 0 Info ]                            │
+│                                                                  │
+│  Regra   │ Severidade │ Arquivo │ Componente │ Mensagem │ Detalhe │
+│  ────────┼────────────┼─────────┼────────────┼──────────┼─────── │
+│  Ref-10  │ Warning    │ rel.frx │ Text364    │ Colch... │ ...    │
+│  Ref-1   │ Error      │ rel.frx │ SubReport1 │ Master.. │ ...    │
+│  ...                                                             │
+│                                                                  │
+│  [Exportar relatório CSV]                                        │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 - Linhas vermelhas → `Error` | Linhas amarelas → `Warning` | Linhas azuis → `Info`
 - Exportação gera `.csv` compatível com Excel: `RevisorFRX_NomeArquivo_yyyyMMdd_HHmmss.csv`
 - Botão `[?]` abre guia de regras e glossário de termos FastReport
 - Botão `[⚙]` abre tela de configuração para ativar/desativar regras individualmente
+- Botão `[🔍]` abre o **Explorador de Schema** (habilitado ao selecionar um arquivo)
+
+### Explorador de Schema
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  Explorador de Schema — NomeArquivo.frx                              │
+│                                                                      │
+│  🔍 [______________]  Tipo: [▼ todos ]  Entidade: [▼ todas ]        │
+│  □ Apenas ⚠ null (objeto)    □ Apenas campos usados no relatório    │
+│  ──────────────────────────────────────────────────────────────────  │
+│  Entidade │ Campo │ Tipo │ Caminho completo │ Usado em               │
+│  42 campo(s) exibido(s) de 87 total  [📋 Copiar caminho]  [Fechar]  │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+- Pesquisa em tempo real por entidade, campo ou caminho completo
+- Filtro por tipo de dado e por entidade
+- Colorização por tipo: azul = Decimal/Double, lilás = DateTime, verde = Int*, amarelo = null
+- Duplo-clique ou `[📋 Copiar caminho]` copia `[Dados.Entidade.Campo]` para o clipboard
 
 ---
 
@@ -120,7 +140,8 @@ RevisorFRX/
 │   ├── Models/
 │   │   ├── RuleResult.cs         # Modelo de resultado (Severity, RuleCode, Message…)
 │   │   ├── RuleDefinition.cs     # Metadados de cada regra (código, descrição, severidade)
-│   │   └── RuleConfig.cs         # Estado on/off por regra
+│   │   ├── RuleConfig.cs         # Estado on/off por regra
+│   │   └── SchemaField.cs        # Campo do Dictionary com tipo, caminho e uso no relatório
 │   ├── RuleRegistry.cs           # Catálogo central com todas as regras do sistema
 │   ├── Rules/
 │   │   ├── SchemaBuilder.cs      # Helper compartilhado: constrói mapa de campos do Dictionary
@@ -137,11 +158,13 @@ RevisorFRX/
 │   │   ├── Code4Rule.cs          # CNPJ alfanumérico (jul/2026)
 │   │   └── Ref12Rule.cs          # CanGrow inconsistente banda vs TextObject
 │   └── Services/
-│       └── FrxAnalyzer.cs        # Orquestra as regras e ordena por severidade
+│       ├── FrxAnalyzer.cs        # Orquestra as regras e ordena por severidade
+│       └── SchemaExtractor.cs    # Extrai campos do Dictionary como List<SchemaField>
 └── RevisorFRX.App/               # WinForms — apenas UI
     ├── MainForm.cs               # Janela principal
     ├── ConfigForm.cs             # Tela de ativação/desativação de regras
     ├── HelpForm.cs               # Guia de regras e glossário
+    ├── SchemaExplorerForm.cs     # Explorador de Schema com filtros e cópia de caminho
     └── Program.cs
 ```
 
@@ -206,6 +229,26 @@ A regra aparece automaticamente na tela de configuração (⚙) e pode ser ativa
 
 ---
 
+## Testes
+
+O diretório `ArquivoFRXTeste/` contém FRX de teste que exercitam todas as regras:
+
+| Arquivo | O que cobre |
+|---------|-------------|
+| `teste_completo_todas_regras.frx` | **Todas as 11 regras** com casos positivos e negativos — 20 findings esperados |
+| `teste_completo.frx` | Regras principais com exemplos isolados |
+| `teste_code4.frx` / `teste_code4_expandido.frx` | CNPJ alfanumérico (Code-4) |
+| `teste_aninhado.frx` | Schema aninhado (Expr-1, Expr-2, Format-1, Ref-10) |
+| `teste_layout.frx` | Layout (Ref-12, Format-6) |
+| `teste_ref2_*.frx` | DataSource ausente (Ref-2) |
+
+Para validar:
+```bash
+dotnet run -- -f "ArquivoFRXTeste/teste_completo_todas_regras.frx"
+```
+
+---
+
 ## Bugs corrigidos
 
 | # | Arquivo | Descrição |
@@ -218,6 +261,12 @@ A regra aparece automaticamente na tela de configuração (⚙) e pode ser ativa
 | 6 | `Format1Rule.cs` | `System.Nullable<Decimal>` e `System.Nullable<DateTime>` não eram detectados como tipos formatáveis |
 | 7 | `Format1Rule.cs` | DateTime com `Format="Date"` sem `Format.Pattern` gerava falso positivo — o FastReport omite o atributo quando é o valor padrão (`dd/MM/yyyy`) |
 | 8 | `MainForm.cs` | Rótulo do botão de exportação exibia `.txt` em vez de `CSV` |
+| 9 | `Expr2Rule.cs` | `Detail` da regra Expr-2 exibia o literal `{caminho}` em vez do nome do campo — faltava prefixo `$` na string de interpolação |
+| 10 | `SchemaExtractor.cs` | Colunas aninhadas dentro de `Column` com `DataType="null"` não eram extraídas — o método retornava cedo sem recursão nos filhos |
+| 11 | `Ref12Rule.cs` | `InvalidOperationException` ao reordenar grid por severidade — `Clear()` invalidava as referências das linhas |
+| 12 | `Code2Rule.cs` / `Code3Rule.cs` | Roslyn `MethodDeclarationSyntax` não capturava métodos em scripts file-scoped (típico do FastReport) — corrigido com `LocalFunctionStatementSyntax` |
+| 13 | `MainForm.cs` | Race condition: `_selectedFilePath` lido dentro de `Task.Run` podia mudar se usuário clicasse em outro arquivo |
+| 14 | `SchemaExplorerForm.cs` | `CopySelectedPath()` lançava exceção quando grid estava vazio (coluna "Vazio" não tem campo "Caminho") |
 
 ---
 
@@ -229,6 +278,45 @@ A regra aparece automaticamente na tela de configuração (⚙) e pode ser ativa
 - `Format-1` não analisa TextObjects cujo Text contenha chamadas de função (parênteses) para evitar falsos positivos.
 - `Format-7` verifica `Barcode.CalcCheckSum` — se o atributo não existe no XML, a regra não dispara (assinatura do FastReport para tipos como QR Code não utilizam este atributo).
 - `Ref-3` removido — taxa de falso positivo >70% nos modelos reais (eventos legados/tratados externamente). O código (`Ref3Rule.cs`) permanece no repositório como referência, mas não é registrado.
+
+---
+
+## Fluxo de trabalho com branches (GitHub)
+
+```bash
+# 1. Criar e trocar para uma nova branch
+git checkout -b apresentacao
+
+# 2. Ver o que será commitado
+git status
+git diff
+
+# 3. Adicionar os arquivos desejados (ou "." para todos)
+git add .
+# ou adicione arquivos específicos:
+# git add README.md RevisorFRX.App/MainForm.cs
+
+# 4. Commit
+git commit -m "Versão apresentação: correções de bugs e FRX de cobertura total"
+
+# 5. Subir a branch para o GitHub (primeira vez)
+git push -u origin apresentacao
+
+# Nas próximas vezes na mesma branch:
+git push
+
+# 6. No GitHub, abra um Pull Request da branch `apresentacao` para `main`
+#    (pela interface web)
+```
+
+### Comandos úteis do dia a dia
+
+```bash
+git branch                  # lista branches locais
+git checkout main           # volta para main
+git branch -d apresentacao   # deleta branch local (depois de merge)
+git log --oneline -10       # ver os últimos 10 commits
+```
 
 ---
 

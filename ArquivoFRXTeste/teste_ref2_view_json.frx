@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp">
+  <Dictionary>
+    <ViewDataSource Name="ViewCliente" DataType="null" Enabled="true">
+      <Column Name="Nome" DataType="System.String"/>
+      <Column Name="Email" DataType="System.String"/>
+    </ViewDataSource>
+    <JsonDataSource Name="JsonPedido" DataType="null" Enabled="true">
+      <Column Name="Id" DataType="System.Int32"/>
+      <Column Name="Valor" DataType="System.Decimal"/>
+    </JsonDataSource>
+    <ViewDataSource Name="ViewSemUso" DataType="null" Enabled="true">
+      <Column Name="Nada" DataType="System.String"/>
+    </ViewDataSource>
+  </Dictionary>
+  <ReportPage>
+    <DataBand Name="BandView" DataSource="ViewCliente">
+      <TextObject Name="TxtNome" Text="[ViewCliente.Nome]"/>
+    </DataBand>
+    <DataBand Name="BandJson" DataSource="JsonPedido">
+      <TextObject Name="TxtValor" Text="[JsonPedido.Valor]"/>
+    </DataBand>
+    <DataBand Name="BandViewFake" DataSource="ViewQueNaoExiste"/>
+    <DataBand Name="BandJsonFake" DataSource="JsonQueNaoExiste"/>
+  </ReportPage>
+</Report>

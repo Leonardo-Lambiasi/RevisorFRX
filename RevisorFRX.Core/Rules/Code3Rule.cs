@@ -39,6 +39,9 @@ public class Code3Rule
         var metodosDeclarados = root.DescendantNodes()
             .OfType<MethodDeclarationSyntax>()
             .Select(m => m.Identifier.ValueText)
+            .Concat(root.DescendantNodes()
+                .OfType<LocalFunctionStatementSyntax>()
+                .Select(m => m.Identifier.ValueText))
             .ToHashSet();
 
         foreach (var metodo in MetodosObrigatorios)

@@ -10,9 +10,8 @@ public class Ref2Rule
         var results = new List<RuleResult>();
 
         var declarados = doc.Descendants()
-            .Where(e => e.Name.LocalName == "BusinessObjectDataSource"
-                     || e.Name.LocalName == "TableDataSource"
-                     || e.Name.LocalName == "CsvDataSource")
+            .Where(e => e.Name.LocalName is "BusinessObjectDataSource" or "TableDataSource"
+                     or "CsvDataSource" or "ViewDataSource" or "JsonDataSource")
             .Where(e => e.Attribute("Enabled")?.Value != "false")
             .Select(e => e.Attribute("Name")?.Value)
             .Where(v => !string.IsNullOrEmpty(v))
@@ -22,9 +21,8 @@ public class Ref2Rule
         // apenas componentes visuais (DataBand, etc.) devem ser verificados.
         var elementos = doc.Descendants()
             .Where(e => e.Attribute("DataSource") != null)
-            .Where(e => e.Name.LocalName != "BusinessObjectDataSource")
-            .Where(e => e.Name.LocalName != "TableDataSource")
-            .Where(e => e.Name.LocalName != "Column")
+            .Where(e => e.Name.LocalName is not ("BusinessObjectDataSource" or "TableDataSource"
+                         or "ViewDataSource" or "JsonDataSource" or "CsvDataSource" or "Column"))
             .Where(e => !e.Ancestors().Any(a => a.Name.LocalName == "Dictionary"));
 
         foreach (var el in elementos)

@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp">
+  <ScriptText><![CDATA[
+    using System;
+    using System.Text.RegularExpressions;
+
+    void Teste_BeforePrint() { }
+
+    bool ValidarCnpjApenasDigitos(string cnpj) {
+        return Regex.IsMatch(cnpj, @"^\d{14}$");
+    }
+
+    bool ValidarTamanhoFixo(string doc) {
+        return doc.Length == 14;
+    }
+
+    void AplicarMascaraDeDocumento() {
+        // Code-2: cast direto (int)Row["x"] sem verificacao de nulo
+        var inteiro = (int)Row["CampoInt"];
+    }
+
+    void ExtrairCaracteresNumericos() {
+        // Code-2: .Value em Nullable sem HasValue
+        var data = ((System.DateTime?)Row["DataCampo"]).Value;
+    }
+
+    void AplicarMascaraDeCNPJ() {
+        // OK — cast para string, nao dispara
+        var texto = (string)Row["Texto"];
+    }
+
+    void AplicarMascaraDeCPF() { }
+  ]]></ScriptText>
+  <Dictionary>
+    <!-- Fonte 1: BusinessObjectDataSource tradicional -->
+    <BusinessObjectDataSource Name="Dados" DataType="null" Enabled="true">
+      <Column Name="Cliente" DataType="null">
+        <Column Name="Nome" DataType="System.String"/>
+        <Column Name="Cpf" DataType="System.String"/>
+        <Column Name="Cnpj" DataType="System.Int64"/>
+        <Column Name="Saldo" DataType="System.Decimal"/>
+        <Column Name="DataNasc" DataType="System.DateTime"/>
+        <Column Name="Ativo" DataType="System.Boolean"/>
+        <Column Name="EnderecoCompleto" DataType="null">
+          <Column Name="Rua" DataType="System.String"/>
+          <Column Name="Cep" DataType="System.String"/>
+        </Column>
+      </Column>
+      <Column Name="Pedido" DataType="null">
+        <Column Name="Numero" DataType="System.Int32"/>
+        <Column Name="ValorTotal" DataType="System.Decimal"/>
+        <Column Name="DataEmissao" DataType="System.DateTime"/>
+      </Column>
+    </BusinessObjectDataSource>
+
+    <!-- Fonte 2: TableDataSource -->
+    <TableDataSource Name="TabelaEstoque" DataType="null" Enabled="true">
+      <Column Name="Produto" DataType="System.String"/>
+      <Column Name="Quantidade" DataType="System.Int32"/>
+    </TableDataSource>
+
+    <!-- Fonte 3: CsvDataSource -->
+    <CsvDataSource Name="ArquivoCsv" DataType="null" Enabled="true">
+      <Column Name="Codigo" DataType="System.String"/>
+    </CsvDataSource>
+
+    <!-- Fonte 4: ViewDataSource -->
+    <ViewDataSource Name="ViewRelatorio" DataType="null" Enabled="true">
+      <Column Name="TotalGeral" DataType="System.Decimal"/>
+    </ViewDataSource>
+
+    <!-- Fonte 5: JsonDataSource -->
+    <JsonDataSource Name="JsonApi" DataType="null" Enabled="true">
+      <Column Name="Status" DataType="System.String"/>
+    </JsonDataSource>
+
+    <!-- Fonte 6: Desativada (Enabled=false) -->
+    <BusinessObjectDataSource Name="FonteAntiga" DataType="null" Enabled="false">
+      <Column Name="Legado" DataType="System.String"/>
+    </BusinessObjectDataSource>
+  </Dictionary>
+
+  <ReportPage>
+    <!-- DataBands com DataSource válido — NENHUM Ref-2 deve disparar pra esses -->
+    <DataBand Name="BandDados" DataSource="Dados"/>
+    <DataBand Name="BandEstoque" DataSource="TabelaEstoque"/>
+    <DataBand Name="BandCsv" DataSource="ArquivoCsv"/>
+    <DataBand Name="BandView" DataSource="ViewRelatorio"/>
+    <DataBand Name="BandJson" DataSource="JsonApi"/>
+
+    <!-- DataBand com fonte desativada — DEVE disparar Ref-2 (Enabled=false) -->
+    <DataBand Name="BandDesativada" DataSource="FonteAntiga"/>
+
+    <!-- DataBand com fonte que nao existe — DEVE disparar Ref-2 -->
+    <DataBand Name="BandInexistente" DataSource="FonteFakeQueNaoExiste"/>
+
+    <!-- DataBand referenciando MasterComponent que nao existe — DEVE disparar Ref-1 -->
+    <DataBand Name="Filha" MasterComponent="MestreQueNaoExiste"/>
+
+    <!-- Bandas aninhadas para testar Ref-1 valido -->
+    <DataBand Name="Mestre" DataSource="Dados">
+      <DataBand Name="FilhaValida" MasterComponent="Mestre" DataSource="Dados">
+
+        <!-- TextObject com CanGrow=true e banda SEM CanGrow — DEVE disparar Ref-12 (CanGrow) -->
+        <TextObject Name="TxtGrowSemBanda" CanGrow="true" Text="[Dados.Cliente.Nome]"/>
+
+        <!-- TextObject com CanGrow=true e banda COM CanGrow — NÃO DEVE disparar Ref-12 -->
+        <TextObject Name="TxtGrowOk" CanGrow="true" CanShrink="true" Text="[Dados.Cliente.Nome]"/>
+
+        <!-- Decimal sem Format — DEVE disparar Format-1 -->
+        <TextObject Name="TxtSaldo" Text="[Dados.Cliente.Saldo]"/>
+
+        <!-- DateTime sem Format — DEVE disparar Format-1 -->
+        <TextObject Name="TxtDataNasc" Text="[Dados.Cliente.DataNasc]"/>
+
+        <!-- Decimal com Format correto "Currency" — NÃO DEVE disparar Format-1 -->
+        <TextObject Name="TxtSaldoOk" Text="[Dados.Pedido.ValorTotal]" Format="Currency" Format.DecimalDigits="2"/>
+
+        <!-- DateTime com Format correto "Date" — NÃO DEVE disparar Format-1 -->
+        <TextObject Name="TxtDataOk" Text="[Dados.Pedido.DataEmissao]" Format="Date"/>
+
+        <!-- Campo que nao existe no schema — DEVE disparar Expr-1 -->
+        <TextObject Name="TxtInexistente" Text="[Dados.Cliente.CampoInexistente]"/>
+
+        <!-- Campo nao escalar (objeto) — DEVE disparar Expr-2 -->
+        <TextObject Name="TxtNaoEscalar" Text="[Dados.Cliente.EnderecoCompleto]"/>
+
+        <!-- Expressao com espacos — DEVE ser ignorada (space stripping) -->
+        <TextObject Name="TxtComEspacos" Text="[Dados. Cliente .Saldo]"/>
+
+        <!-- Expressao matematica composta — NÃO DEVE disparar -->
+        <TextObject Name="TxtMatematico" Text="[[Dados.Cliente.Saldo] + [Dados.Pedido.ValorTotal]]"/>
+
+        <!-- Colchetes desbalanceados — DEVE disparar Ref-10 -->
+        <TextObject Name="TxtDesbalanceado" Text="Total: [[Dados.Cliente.Saldo]"/>
+
+        <!-- Colchetes balanceados — NÃO DEVE disparar Ref-10 -->
+        <TextObject Name="TxtBalanceado" Text="Saldo: [Dados.Cliente.Saldo]"/>
+
+        <!-- HTML sem HtmlTags ativado — DEVE disparar Format-6 -->
+        <TextObject Name="TxtHtml" Text="&lt;b&gt;Nome:&lt;/b&gt; [Dados.Cliente.Nome]"/>
+
+        <!-- HTML com HtmlTags ativado — NÃO DEVE disparar Format-6 -->
+        <TextObject Name="TxtHtmlOk" Text="&lt;i&gt;Ok&lt;/i&gt;" TextRenderType="HtmlTags"/>
+
+        <!-- Barcode com CalcCheckSum diferente de false — DEVE disparar Format-7 -->
+        <BarcodeObject Name="CodigoBarras" Barcode.CalcCheckSum="true"/>
+
+        <!-- Barcode com CalcCheckSum=false — NÃO DEVE disparar Format-7 -->
+        <BarcodeObject Name="CodigoOk" Barcode.CalcCheckSum="false"/>
+
+        <!-- Code-4: mascara de CNPJ no Format — DEVE disparar -->
+        <TextObject Name="TxtCnpjMascarado" Text="[Dados.Cliente.Cnpj]" Format="##.###.###/####-##"/>
+
+        <!-- Code-4: campo numerico cnpj — DEVE disparar (Int64) -->
+        <!-- Code-4: campo numerico cpf — DEVE disparar (String, nao dispara) -->
+
+        <!-- TextObject vazio — NÃO DEVE disparar nada -->
+        <TextObject Name="TxtVazio" Text=""/>
+      </DataBand>
+
+      <DataBand Name="FilhaCanGrow" CanGrow="true" MasterComponent="Mestre" DataSource="Dados">
+        <TextObject Name="TxtGrowComBanda" CanGrow="true" Text="[Dados.Cliente.Nome]"/>
+      </DataBand>
+    </DataBand>
+
+    <!-- Text com string vazia — NÃO DEVE disparar -->
+    <TextObject Name="TxtLiteral" Text="Texto estatico sem campos"/>
+  </ReportPage>
+</Report>
