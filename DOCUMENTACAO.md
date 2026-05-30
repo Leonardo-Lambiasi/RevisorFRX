@@ -483,6 +483,37 @@ omite esse atributo no XML quando o padrão `dd/MM/yyyy` está em uso.
 
 ---
 
+### Fix-1 — Valor fixo no layout
+
+**Desabilitada por padrão.** Ative em ⚙ quando necessário.
+
+```
+1. Para cada TextObject:
+   a. Se Text contém [Dados. → skip (expressão do schema)
+   b. Se Text está na whitelist → skip
+   c. Aplica detectores habilitados em Fix1Config:
+      CNPJ: \d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}
+      CPF:  \b\d{3}\.\d{3}\.\d{3}-\d{2}\b
+      CEP:  \bCEP\s*:?\s*\d{5}-\d{3}\b  (exige label CEP)
+      Telefone: \(\d{2}\)\s*\d{4,5}-\d{4}
+      Data literal: \b\d{2}/\d{2}/\d{4}\b + sem '[' no Text
+      Valor R$: R\$\s*\d+ + Text.Length <= 120
+      Ordinal cartório: \d+[oºª°]\s+(Tabelionato|Cartório|...)
+        palavras configuráveis em hard1-config.json
+      Agência: \bAg[eê]ncia\s+\d+\b
+2. Para cada PictureObject:
+   Se Image preenchido E DataColumn vazio
+   E sem AfterDataEvent → Warning (imagem embutida)
+```
+
+**Configuração:** `hard1-config.json` na pasta do executável. Carregado por `Fix1Config.Carregar(path)` — silencioso em qualquer falha (arquivo ausente, JSON inválido), usa defaults.
+
+**Regex de ordinal:** compilado sob demanda e cacheado por instância de `Fix1Rule`. Recompila apenas se `PalavrasServentia` mudar entre chamadas — eficiente em batch.
+
+**Limite conhecido:** texto livre sem padrão estrutural (nomes de tabelião, endereço sem CEP, nome de município) não é detectado — requer lista de termos curados.
+
+---
+
 ## Modelo de dados
 
 ```csharp
@@ -518,6 +549,7 @@ public class SchemaField
 - Roda em `Task.Run` — UI não trava durante análise
 - `XDocument` declarado dentro do lambda: sai de escopo ao fim, GC coleta antes do próximo arquivo
 - Arquivo único: `_analisandoArquivo` previne análises paralelas por double-click
+- Fix-1: regex estáticos com `RegexOptions.Compiled`; regex de ordinal cacheado por instância — recompila apenas quando `PalavrasServentia` mudar entre execuções
 
 ### Explorador de Schema
 - `DataGridView` em Virtual Mode: renderiza apenas as ~20 linhas visíveis na tela, independente do volume total

@@ -1,0 +1,24 @@
+{
+  "_comentario": "Configuração da regra Fix-1 — valores fixos que deveriam vir do schema. Edite para ajustar os detectores.",
+  "_versao": "1.0",
+  "deteccao": {
+    "cnpj":             true,
+    "cpf":              true,
+    "cep":              true,
+    "telefone":         true,
+    "data_literal":     true,
+    "valor_monetario":  true,
+    "ordinal_cartorio": true,
+    "agencia_bancaria": true,
+    "imagem_embutida":  true
+  },
+  "palavras_serventia": [
+    "Tabelionato", "Cartório", "Ofício", "Registro",
+    "TPSP", "TPSC", "TJSP"
+  ],
+  "whitelist_textos": [
+    "Certifico e dou fé",
+    "1º Via", "2º Via", "3º Via",
+    "Via do Cliente", "Via do Cartório"
+  ]
+}

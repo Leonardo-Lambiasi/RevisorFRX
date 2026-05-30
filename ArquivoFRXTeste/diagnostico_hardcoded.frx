@@ -2054,7 +2054,6 @@ namespace FastReport
       <TextObject Name="txtLabelOrdinal"
         Left="10" Top="380" Width="100" Height="18"
         Text="1º Via"/>
-
-    </DataBand>
+      </DataBand>
   </ReportPage>
 </Report>

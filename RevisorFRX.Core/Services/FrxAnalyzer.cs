@@ -18,8 +18,9 @@ public class FrxAnalyzer
     private static readonly Ref12Rule Ref12 = new();
     private static readonly Format7Rule Format7 = new();
     private static readonly Code4Rule Code4 = new();
+    private static readonly Fix1Rule Fix1 = new();
 
-    public List<RuleResult> Analyze(string frxContent, RuleConfig? config = null)
+    public List<RuleResult> Analyze(string frxContent, RuleConfig? config = null, string? fix1ConfigPath = null)
     {
         config ??= RuleConfig.AllEnabled();
 
@@ -50,6 +51,13 @@ public class FrxAnalyzer
             results.AddRange(Format7.Check(doc));
         if (config.IsEnabled("Code-4"))
             results.AddRange(Code4.Check(doc));
+
+        if (config.IsEnabled("Fix-1"))
+        {
+            var fix1Config = Fix1Config.Carregar(
+                fix1ConfigPath ?? Path.Combine(AppContext.BaseDirectory, "hard1-config.json"));
+            results.AddRange(Fix1.Check(doc, fix1Config));
+        }
 
         return results.OrderBy(r => r.Severity).ToList();
     }

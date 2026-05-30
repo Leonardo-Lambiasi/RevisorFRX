@@ -24,7 +24,6 @@ public class MainForm : Form
     private readonly Panel _badgePanel;
     private readonly Label _errorsLabel;
     private readonly Label _warningsLabel;
-    private readonly Label _infoLabel;
     private readonly DataGridView _grid;
     private readonly Button _exportButton;
     private readonly Button _btnAjuda;
@@ -205,10 +204,9 @@ public class MainForm : Form
             BackColor = Color.FromArgb(248, 249, 250)
         };
 
-        var errorBadge   = CreateBadge(0,   Color.FromArgb(220, 53, 69),  Color.White,                  out _errorsLabel);
-        var warningBadge = CreateBadge(130, Color.FromArgb(255, 193, 7),  Color.FromArgb(33, 37, 41),   out _warningsLabel);
-        var infoBadge    = CreateBadge(260, Color.FromArgb(13, 202, 240), Color.FromArgb(33, 37, 41),   out _infoLabel);
-        _badgePanel.Controls.AddRange(new Control[] { errorBadge, warningBadge, infoBadge });
+        var errorBadge   = CreateBadge(0,   Color.FromArgb(220, 53, 69),  Color.White,                out _errorsLabel);
+        var warningBadge = CreateBadge(160, Color.FromArgb(255, 193, 7),  Color.FromArgb(33, 37, 41), out _warningsLabel);
+        _badgePanel.Controls.AddRange(new Control[] { errorBadge, warningBadge });
 
         // --- ListBox de arquivos (visível ao selecionar pasta, antes da análise) ---
         _frxListBox = new ListBox
@@ -673,10 +671,8 @@ public class MainForm : Form
     {
         var e = _results.Count(r => r.Severity == Severity.Error);
         var w = _results.Count(r => r.Severity == Severity.Warning);
-        var i = _results.Count(r => r.Severity == Severity.Info);
         _errorsLabel.Text   = $"{e} Erro{(e != 1 ? "s" : "")}";
         _warningsLabel.Text = $"{w} Aviso{(w != 1 ? "s" : "")}";
-        _infoLabel.Text     = $"{i} Info";
     }
 
     private void ExportButton_Click(object? sender, EventArgs e)

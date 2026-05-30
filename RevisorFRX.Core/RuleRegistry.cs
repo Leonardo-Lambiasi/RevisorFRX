@@ -20,5 +20,6 @@ public static class RuleRegistry
         new() { Code = "Expr-1",   Description = "Campo ausente no schema do Dictionary",            DefaultSeverity = Severity.Warning },
         new() { Code = "Expr-2",   Description = "Campo não escalar em expressão",                   DefaultSeverity = Severity.Warning },
         new() { Code = "Code-4",   Description = "CNPJ alfanumérico — padrões que assumem apenas dígitos", DefaultSeverity = Severity.Warning, DefaultEnabled = false },
+        new() { Code = "Fix-1",    Description = "Valor fixo no layout que deveria vir do schema (CNPJ, CPF, CEP, telefone, data, valor R$, ordinal de cartório, agência, imagem embutida)", DefaultSeverity = Severity.Warning, DefaultEnabled = false },
     ];
 }

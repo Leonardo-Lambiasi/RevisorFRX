@@ -300,7 +300,7 @@ public class HelpForm : Form
             "Interrompe a análise em andamento (aparece apenas durante análise de pasta)");
 
         Sep(rtb);
-        H2(rtb, "  As 12 verificações realizadas");
+        H2(rtb, "  As verificações realizadas");
         Blank(rtb);
 
         Sel(rtb, new Font("Segoe UI", 10F, FontStyle.Bold), ClrErro);
@@ -321,6 +321,20 @@ public class HelpForm : Form
         BulletNegrito(rtb, "  Ref-12",   "TextObject pode crescer verticalmente mas a banda pai não");
         BulletNegrito(rtb, "  Code-4",   "CNPJ tratado como apenas dígitos — novo formato permite letras");
         BulletNegrito(rtb, "  Ref-10",   "Colchetes desbalanceados em uma expressão de campo");
+        Blank(rtb);
+
+        Sel(rtb, new Font("Segoe UI", 10F, FontStyle.Bold), ClrAviso);
+        rtb.AppendText("  Desabilitada por padrão — ative em ⚙ quando necessário\n");
+        Sel(rtb, new Font("Segoe UI", 10F, FontStyle.Bold), ClrTexto);
+        rtb.AppendText("  Fix-1");
+        Sel(rtb, new Font("Segoe UI", 10F), ClrDimmed);
+        rtb.AppendText("  Valores fixos no layout que deveriam vir do schema:\n");
+        Sel(rtb, new Font("Segoe UI", 10F), ClrTexto);
+        rtb.AppendText("         CNPJ, CPF, CEP, telefone, datas literais, valores R$,\n");
+        rtb.AppendText("         nome de cartório (ex: \"4º Tabelionato\"), agência bancária e\n");
+        rtb.AppendText("         logos embutidas em base64.\n");
+        rtb.AppendText("         Útil ao preparar modelos para implantação em novo cartório.\n");
+        rtb.AppendText("         Configure os detectores em: ⚙ → Fix-1 → ✏ Fix-1...\n");
         Blank(rtb);
     }
 
@@ -463,5 +477,12 @@ public class HelpForm : Form
         Termo(rtb, "Severidade Warning  (🟡)",
             "Comportamento inesperado em runtime. O relatório funciona mas pode exibir\n" +
             "      dados de forma incorreta ou inesperada em determinadas situações.");
+
+        Termo(rtb, "hard1-config.json",
+            "Arquivo de configuração da regra Fix-1. Fica na mesma pasta do executável.\n" +
+            "      Permite ligar/desligar cada detector individualmente e personalizar\n" +
+            "      palavras de serventia (ex: Tabelionato, Ofício) e whitelist de textos\n" +
+            "      (ex: frases legais obrigatórias que não são hardcoded de cartório).\n" +
+            "      Se ausente, usa valores padrão automaticamente — sem mensagem de erro.");
     }
 }

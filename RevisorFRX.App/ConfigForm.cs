@@ -99,6 +99,48 @@ public class ConfigForm : Form
 
         PopulateList();
 
+        // Índice da Fix-1 na lista (dinâmico — não hardcoded)
+        var fix1Index = RuleRegistry.GetAll()
+            .Select((r, i) => (r, i))
+            .First(x => x.r.Code == "Fix-1").i;
+
+        var btnEditFix1 = new Button
+        {
+            Text      = "✏ Fix-1...",
+            Location  = new Point(16, 380),
+            Size      = new Size(110, 28),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(60, 60, 60),
+            ForeColor = Color.White,
+            Cursor    = Cursors.Hand,
+            Enabled   = false,   // habilitado apenas quando Fix-1 está selecionada na lista
+            UseVisualStyleBackColor = false
+        };
+        btnEditFix1.FlatAppearance.BorderSize = 0;
+
+        // Habilita o botão apenas quando a linha da Fix-1 está selecionada
+        _ruleList.SelectedIndexChanged += (_, _) =>
+            btnEditFix1.Enabled = _ruleList.SelectedIndex == fix1Index;
+
+        btnEditFix1.Click += (_, _) =>
+        {
+            var configPath = Path.Combine(AppContext.BaseDirectory, "hard1-config.json");
+            if (!File.Exists(configPath))
+            {
+                MessageBox.Show(
+                    $"Arquivo de configuração não encontrado:\n{configPath}\n\n" +
+                    "Verifique se hard1-config.json está na pasta do executável.",
+                    "Fix-1 — Config",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                return;
+            }
+            System.Diagnostics.Process.Start("notepad.exe", configPath);
+        };
+
+        var toolTip = new ToolTip();
+        toolTip.SetToolTip(btnEditFix1, "Editar configuração da regra Fix-1 (hard1-config.json)");
+
         var btnOk = new Button
         {
             Text = "OK",
@@ -134,7 +176,7 @@ public class ConfigForm : Form
         {
             titleLabel, subtitleLabel,
             btnSelectAll, btnDeselectAll, btnRestaurar,
-            _ruleList, btnOk, btnCancel
+            _ruleList, btnEditFix1, btnOk, btnCancel
         });
 
         ResumeLayout(true);

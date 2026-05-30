@@ -38,6 +38,7 @@ Todas as regras podem ser ativadas/desativadas individualmente pelo botão **⚙
 | `Ref-12`   | TextObject com `CanGrow="true"` dentro de DataBand sem `CanGrow="true"` — texto pode sobrepor |
 | `Code-4`  | CNPJ pode conter letras — detecta validações/máscaras que assumem apenas dígitos |
 | `Ref-10`  | Colchetes `[` `]` desbalanceados no `Text` — expressão não resolve corretamente |
+| `Fix-1` | Valor fixo no layout que deveria vir do schema: CNPJ, CPF, CEP, telefone, data literal, valor R$, ordinal de cartório (ex: "4º Tabelionato"), agência bancária ou imagem embutida em base64. **Desabilitada por padrão** — ative em ⚙ quando necessário. |
 ---
 
 ## Interface
@@ -57,7 +58,7 @@ Todas as regras podem ser ativadas/desativadas individualmente pelo botão **⚙
 │  ──────────────────────────────────────────────────────────────  │
 │  [████████████░░░░]  Analisando arquivo 3 de 15 — Boleto.frx     │
 │  ──────────────────────────────────────────────────────────────  │
-│  [ 3 Erros ] [ 2 Avisos ] [ 0 Info ]                             │
+│  [ 3 Erros ] [ 2 Avisos ]                                       │
 │                                                                  │
 │  Regra  │ Severidade │ Arquivo │ Componente │ Mensagem │ Detalhe  │
 │  ───────┼────────────┼─────────┼────────────┼──────────┼───────  │
@@ -121,6 +122,17 @@ A tela de ajuda contém documentação interativa com 4 abas:
 - **Busca de Dados** — como usar o Explorador de Schema, status dos campos e filtros avançados explicados sem jargão técnico
 - **Glossário** — 15 termos do FastReport explicados em linguagem simples
 
+### Fix-1 — Configuração de detectores
+
+A regra Fix-1 é configurável via arquivo `hard1-config.json` na mesma pasta do executável. Para editar: abra `⚙`, selecione Fix-1 na lista e clique em `[✏ Fix-1...]`.
+
+O arquivo permite:
+- Ligar/desligar cada detector individualmente (`cnpj`, `cpf`, `cep`, `telefone`, `data_literal`, `valor_monetario`, `ordinal_cartorio`, `agencia_bancaria`, `imagem_embutida`)
+- Personalizar palavras de serventia para o detector de ordinal (padrão: Tabelionato, Cartório, Ofício, Registro, TPSP...)
+- Adicionar textos à whitelist para evitar falsos positivos (padrão: "Certifico e dou fé", "1º Via", "2º Via"...)
+
+Se o arquivo não existir, a regra usa os valores padrão automaticamente — sem erro.
+
 ---
 
 ## Requisitos
@@ -171,6 +183,7 @@ RevisorFRX/
 ├── .gitignore
 ├── README.md
 ├── DOCUMENTACAO.md               # Como funciona internamente
+├── hard1-config.json            # Configuração da Fix-1 (copiado para pasta do executável no publish)
 ├── RevisorFRX.Core/              # Lógica pura, sem dependência de UI
 │   ├── Models/
 │   │   ├── RuleResult.cs         # Modelo de resultado (Severity, RuleCode, Message…)
@@ -191,7 +204,9 @@ RevisorFRX/
 │   │   ├── Format6Rule.cs        # Tags HTML sem HtmlTags ativado
 │   │   ├── Format7Rule.cs        # Barcode sem Checksum=false
 │   │   ├── Code4Rule.cs          # CNPJ alfanumérico (jul/2026)
-│   │   └── Ref12Rule.cs          # CanGrow inconsistente banda vs TextObject
+│   │   ├── Ref12Rule.cs          # CanGrow inconsistente banda vs TextObject
+│   │   ├── Fix1Rule.cs           # Detecta valores hardcoded no layout
+│   │   └── Fix1Config.cs         # Configuração carregada de hard1-config.json
 │   └── Services/
 │       ├── FrxAnalyzer.cs        # Orquestra as regras e ordena por severidade
 │       ├── SchemaExtractor.cs    # Extrai campos do Dictionary como List<SchemaField>
@@ -313,6 +328,7 @@ dotnet run -- -f "ArquivoFRXTeste/teste_completo_todas_regras.frx"
 | 22 | MainForm.cs | CSV exportado sem BOM UTF-8 — acentos errados no Excel pt-BR |
 | 23 | MainForm.cs | ReordenarGridPorSeveridade reutilizava DataGridViewRow após Clear() — reconstruído a partir de _results |
 | 24 | `MainForm.cs` | Botão "Exportar CSV" visível mesmo com 0 resultados — ocultado quando `_results.Count == 0` |
+| 25 | `MainForm.cs` | Badge "Info" removido da UI — nenhuma regra gera severidade Info atualmente; `Severity.Info` preservado no enum para uso futuro |
 
 ---
 

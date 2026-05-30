@@ -18,4 +18,10 @@
     <ProjectReference Include="..\RevisorFRX.Core\RevisorFRX.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\hard1-config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
