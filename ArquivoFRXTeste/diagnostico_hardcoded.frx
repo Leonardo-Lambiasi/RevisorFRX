@@ -1,0 +1,2060 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp" DoublePass="true" ReportInfo.Created="11/25/2019 11:05:57" ReportInfo.Modified="05/05/2026 18:10:32" ReportInfo.CreatorVersion="2022.2.9.0">
+  <ScriptText>using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Data;
+using FastReport;
+using FastReport.Data;
+using FastReport.Dialog;
+using FastReport.Barcode;
+using FastReport.Table;
+using FastReport.Utils;
+using System.Text.RegularExpressions;
+
+namespace FastReport
+{
+  public class ReportScript
+  {       
+    public static string AplicarMascaraDeDocumento(string tipo, string conteudo, bool mascarar)
+    {
+      if (conteudo.Length &lt;= 11 &amp;&amp; tipo == &quot;CPF&quot;)
+        return AplicarMascaraDeCPF(conteudo, mascarar);
+      else
+        return AplicarMascaraDeCNPJ(conteudo, mascarar);
+    }
+
+    public static string ExtrairCaracteresNumericos(string conteudo)
+    {
+      return String.Join(&quot;&quot;, Regex.Split(conteudo, @&quot;[^\d]&quot;));
+    }
+  
+    private static string AplicarMascaraDeCNPJ(string cnpj, bool mascarar)
+    {
+      string cnpjComMascara = string.Empty;
+  
+      if (mascarar)
+      {
+        cnpjComMascara += ExtrairCaracteresNumericos(cnpj).PadLeft(14, '0').Substring(0, 2);
+        cnpjComMascara += &quot;.&quot;;
+        cnpjComMascara += &quot;XXX&quot;;
+        cnpjComMascara += &quot;.&quot;;
+        cnpjComMascara += ExtrairCaracteresNumericos(cnpj).PadLeft(14, '0').Substring(5, 2);
+        cnpjComMascara += &quot;X&quot;;
+        cnpjComMascara += &quot;/&quot;;
+        cnpjComMascara += ExtrairCaracteresNumericos(cnpj).PadLeft(14, '0').Substring(8, 4);
+        cnpjComMascara += &quot;-&quot;;
+        cnpjComMascara += &quot;XX&quot;;
+      }
+      else
+      {
+        cnpjComMascara += ExtrairCaracteresNumericos(cnpj).PadLeft(14, '0').Substring(0, 2);
+        cnpjComMascara += &quot;.&quot;;
+        cnpjComMascara += ExtrairCaracteresNumericos(cnpj).PadLeft(14, '0').Substring(2, 3);
+        cnpjComMascara += &quot;.&quot;;
+        cnpjComMascara += ExtrairCaracteresNumericos(cnpj).PadLeft(14, '0').Substring(5, 3);
+        cnpjComMascara += &quot;/&quot;;
+        cnpjComMascara += ExtrairCaracteresNumericos(cnpj).PadLeft(14, '0').Substring(8, 4);
+        cnpjComMascara += &quot;-&quot;;
+        cnpjComMascara += ExtrairCaracteresNumericos(cnpj).PadLeft(14, '0').Substring(12, 2);
+      }
+      return cnpjComMascara;
+    }
+  
+    private static string AplicarMascaraDeCPF(string cpf, bool mascarar)
+    {
+      string cpfComMascara = string.Empty;
+  
+      if (mascarar)
+      {
+        cpfComMascara += ExtrairCaracteresNumericos(cpf).PadLeft(11, '0').Substring(0, 3);
+        cpfComMascara += &quot;.&quot;;
+        cpfComMascara += &quot;XXX&quot;;
+        cpfComMascara += &quot;.&quot;;
+        cpfComMascara += ExtrairCaracteresNumericos(cpf).PadLeft(11, '0').Substring(6, 3);
+        cpfComMascara += &quot;-&quot;;
+        cpfComMascara += ExtrairCaracteresNumericos(cpf).PadLeft(11, '0').Substring(9, 1);
+        cpfComMascara += &quot;X&quot;;
+      }
+      else
+      {
+        cpfComMascara += ExtrairCaracteresNumericos(cpf).PadLeft(11, '0').Substring(0, 3);
+        cpfComMascara += &quot;.&quot;;
+        cpfComMascara += ExtrairCaracteresNumericos(cpf).PadLeft(11, '0').Substring(3, 3);
+        cpfComMascara += &quot;.&quot;;
+        cpfComMascara += ExtrairCaracteresNumericos(cpf).PadLeft(11, '0').Substring(6, 3);
+        cpfComMascara += &quot;-&quot;;
+        cpfComMascara += ExtrairCaracteresNumericos(cpf).PadLeft(11, '0').Substring(9, 2);
+      }
+      return cpfComMascara;
+    } 
+    
+    public static string AplicarMascaraDeCep(string cep)
+    {
+      if(!string.IsNullOrEmpty(cep))
+      {
+        cep = cep.PadLeft(8, '0');
+        return cep.Substring(0,5) + &quot;-&quot; + cep.Substring(5,3);
+      }
+      else return cep;
+    }
+         
+    private void Text453_AfterData(object sender, EventArgs e)
+    {
+      Text453.Text = ((Int32)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.NumeroDoProtocolo&quot;)).ToString().PadLeft(4,'0') + &quot; - &quot; + ((DateTime)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.DataDoProtocolo&quot;)).ToString(&quot;dd/MM/yyyy&quot;);    
+      Text449.Text = ((Int32)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.NumeroDoProtocolo&quot;)).ToString().PadLeft(4,'0') + &quot; - &quot; + ((DateTime)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.DataDoProtocolo&quot;)).ToString(&quot;dd/MM/yyyy&quot;);  
+      Text399.Text = ((Int32)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.NumeroDoProtocolo&quot;)).ToString().PadLeft(4,'0') + &quot; - &quot; + ((DateTime)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.DataDoProtocolo&quot;)).ToString(&quot;dd/MM/yyyy&quot;);    
+    }
+
+    private void Text423_AfterData(object sender, EventArgs e)
+    {
+      if (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.TipoDoProtesto&quot;)) == &quot;C&quot;)
+        Text423.Text = &quot;COMUM&quot;;
+      else if (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.TipoDoProtesto&quot;))  == &quot;F&quot;)
+        Text423.Text = &quot;FALIMENTAR&quot;;
+      
+      if (((Boolean)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.ProtestoComDireitoDeRegresso&quot;)) == true)
+        Text423.Text = &quot;COMUM COM DIREITO DE REGRESSO&quot;;
+    }
+
+    private void Text9_AfterData(object sender, EventArgs e)
+    {
+      Text9.Text = (&quot;&lt;b&gt;&quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Qualificacao&quot;)) + &quot;&lt;/b&gt;: &quot; +
+        ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Nome&quot;)) + &quot;  &quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)) + &quot; &quot; +
+        AplicarMascaraDeDocumento(((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)),((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.NumeroDoDocumento&quot;)).ToString(),false));  
+    }
+        
+    private void Text417_AfterData(object sender, EventArgs e)    
+    {
+      if (String.IsNullOrEmpty(((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.DescricaoDoVencimento&quot;))))
+        Text417.Text = ((Nullable&lt;DateTime&gt;)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.DataDoVencimento&quot;)).GetValueOrDefault().ToString(&quot;dd/MM/yyyy&quot;);
+      else       
+        Text417.Text =   ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.DescricaoDoVencimento&quot;));
+    }
+        
+    private void Text345_AfterData(object sender, EventArgs e)
+    {
+      if (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.Endosso&quot;)) == &quot;T&quot;)
+        Text345.Text = &quot;Translativo&quot;;
+      else if (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.Endosso&quot;)) == &quot;M&quot;)
+        Text345.Text = &quot;Mandato&quot;;
+      else
+        Text345.Text = &quot;Sem Endosso&quot;;
+    }     
+       
+    private void Text17_AfterData(object sender, EventArgs e)
+    {
+      Text17.Text = ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)) + &quot;: &quot; + 
+        AplicarMascaraDeDocumento(((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)), ((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.NumeroDoDocumento&quot;)).ToString(),false); 
+    }  
+
+    private void Text444_AfterData(object sender, EventArgs e)                   
+    {                  
+      Text444.Text += ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoCartorio.TipoDeDocumento&quot;)) + &quot;: &quot; +                            
+        AplicarMascaraDeDocumento(((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoCartorio.TipoDeDocumento&quot;)), ((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoCartorio.NumeroDoDocumento&quot;)).ToString(),false); 
+    } 
+
+    private void Text409_AfterData(object sender, EventArgs e)
+    {                  
+      Text409.Text += ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoCartorio.TipoDeDocumento&quot;)) + &quot;: &quot; +                            
+        AplicarMascaraDeDocumento(((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoCartorio.TipoDeDocumento&quot;)), ((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoCartorio.NumeroDoDocumento&quot;)).ToString(),false); 
+    }                     
+
+    private void Text361_AfterData(object sender, EventArgs e)
+    {                                                                                             
+      Text361.Text = (
+        &quot;&lt;font size=\&quot;7\&quot;&gt;&lt;b&gt;1.Boleto de Cobrança:&lt;/b&gt; Pagável em qualquer banco até o a data do vencimento.&quot;
+        + &quot;\n&lt;b&gt;2.Na sede do Tabelionato:&lt;/b&gt; &quot;
+        + &quot;\na) Pagamento em Dinheiro, embora &lt;b&gt;RECOMENDA-SE O USO DE OUTROS MEIOS DE PAGAMENTO,&lt;/b&gt; em virtude do &lt;b&gt;PERIGO&lt;/b&gt; apresentado pelo transporte de valores em espécie.&quot;
+        + &quot;\nb) Pagamento em Cheque, o qual deverá ser \&quot;visado ou administrativo\&quot;, pagavel nesta \&quot;praça\&quot;, no valor de &lt;b&gt;R$ &quot; + ((Decimal)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.ValorAProtestar&quot;)).ToString(&quot;N2&quot;) + &quot;&lt;/b&gt;, em nome do Portador acima.&quot;
+        + &quot;\n&lt;b&gt;IMPORTANTE:&lt;/b&gt; O valor das custas e emolumentos (taxas cartórarias), no valor de &lt;b&gt;R$ &quot; + (((Decimal)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDasCustas.ValorTotalDasCustas&quot;)) + ((Decimal)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDasCustas.ValorTotalDeIntimacao&quot;)) + ((Decimal)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDasCustas.ValorTotalDeEdital&quot;))).ToString(&quot;N2&quot;) + &quot;&lt;/b&gt;, deverá ser paga no ato e em apartado (ESTE VALOR NÃO PODERÁ SER SOMADO AO CHEQUE).&quot;
+        + &quot;\n&lt;b&gt;3. Intimação fora do Prazo:&lt;/b&gt; Se a intimação for entregue fora do prazo limite, o pagamento deverá ser feito no primeiro dia útil seguinte, diretamente no Tabelião.&quot;                               
+        + &quot;\n&lt;b&gt;&lt;font size=\&quot;8\&quot;&gt;4. MICROEMPRESA E EPP: contate o Cartório para obter aproximadamente 33% de desconto na taxa de protesto, apresentando a certidão simplificada da JUCESP atualizada (art. 73 da L.C. 123/2006).&lt;/b&gt;&lt;/font&gt;&quot;
+        + &quot;\n&lt;b&gt;ATENÇÃO:&lt;/b&gt; O registro do protesto será informado aos orgãos de proteção ao crédito, se por eles solicitados, nos termos do Art. 29 da Lei nº 9.492/1997.&lt;/font&gt;&quot;);          
+    }                                                                                             
+                                                                                                    
+    private void Text29_AfterData(object sender, EventArgs e)                                                                                                                    
+    {                  
+      var documento = ((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.NumeroDoDocumento&quot;)).ToString();
+      var tipoDoc = (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)));  
+      var docFormat = AplicarMascaraDeDocumento(tipoDoc, documento, false);
+      Text29.Text = tipoDoc + &quot;: &quot; + docFormat; 
+    } 
+    
+    private void Text667_AfterData(object sender, EventArgs e)
+    {     
+      if (((Int32)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.Ordem&quot;)) &gt; 1) {
+        Text667.Text = ((Int32)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.Ordem&quot;)).ToString();
+      } else {
+        Text667.Text = &quot;&quot;;
+      }
+    }
+
+    private void Text622_AfterData(object sender, EventArgs e)
+    {                                                                                                                                                                                                                                                                            
+      Text622.Text = &quot;CEP: &quot; + AplicarMascaraDeCep(((Int32)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.CEP&quot;)).ToString()) + &quot; - &quot; +  ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.Cidade&quot;)) +&quot;/&quot;+ ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.Estado&quot;));
+    }
+
+    private void Text615_AfterData(object sender, EventArgs e)
+    {                                     
+      Text615.Text = AplicarMascaraDeCep(((Int32)Report.GetColumnValue(&quot;Dados.DadosDoCartorio.Endereco.CEP&quot;)).ToString());
+    }
+                              
+    private void Text14_AfterData(object sender, EventArgs e)
+    {                         
+      Text14.Text = (&quot;&lt;b&gt;&quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosCredores.Qualificacao&quot;)) + &quot;&lt;/b&gt;: &quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosCredores.Nome&quot;)));  
+      
+      if (((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosCredores.NumeroDoDocumento&quot;)) &gt; 0)
+        Text14.Text += (&quot; - &quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosCredores.TipoDeDocumento&quot;)) + &quot; &quot; + AplicarMascaraDeDocumento(((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosCredores.TipoDeDocumento&quot;)),((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosCredores.NumeroDoDocumento&quot;)).ToString(), false));  
+    }  
+    
+    private void Text12_AfterData(object sender, EventArgs e)       
+    {                                                                                                                                               
+      Text12.Text = (&quot;&lt;b&gt;&quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosApresentantes.Qualificacao&quot;))+ &quot;&lt;/b&gt;: &quot; + 
+        ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosApresentantes.Nome&quot;)) + &quot; - &quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosApresentantes.TipoDeDocumento&quot;)) + &quot; &quot; +
+        AplicarMascaraDeDocumento(((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosApresentantes.TipoDeDocumento&quot;)),((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDosApresentantes.NumeroDoDocumento&quot;)).ToString() ,false));  
+    }    
+    
+    private void Text426_AfterData(object sender, EventArgs e)
+    {
+      Text426.Text = string.Empty;
+    }
+    
+    private void Text664_AfterData(object sender, EventArgs e)
+    {     
+      if (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.TipoDoProtesto&quot;)) == &quot;F&quot;)
+        Text664.Text = &quot;F&quot;;
+      else
+        Text664.Text = string.Empty;
+    }
+    private void Text33_AfterData(object sender, EventArgs e)
+    {
+      if (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.TipoDoProtesto&quot;)) == &quot;F&quot;)
+        Text33.Text = &quot;F&quot;;
+      else
+        Text33.Text = string.Empty;
+    }
+
+    private void Text34_AfterData(object sender, EventArgs e)
+    {                           
+      if (!string.IsNullOrEmpty((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.AssessoriasDoDevedor.Codigo&quot;)))
+        Text34.Text = (&quot;ASS.:&quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.AssessoriasDoDevedor.Codigo&quot;)));  
+      else
+        Text34.Text = string.Empty;
+    }                                                         
+    //
+    //    private void Text677_AfterData(object sender, EventArgs e)              
+    //    {                                                                 
+    //      Text677.Text = ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.Endereco&quot;))
+    //        + &quot;, &quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.NumeroDoEndereco&quot;))
+    //        + &quot; &quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.Complemento&quot;))
+    //        + &quot; - &quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.Bairro&quot;))
+    //        + &quot; - &quot; + AplicarMascaraDeCep(((Int32)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.CEP&quot;)).ToString())
+    //        + &quot; - &quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.Cidade&quot;))
+    //        + &quot;/&quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Endereco.Estado&quot;));  
+    //      if (((Boolean)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.ProtestoComDireitoDeRegresso&quot;))) 
+    //      {
+    //        Text677.Text = &quot;SACADO NAO ACEITANTE&quot;;
+    //      }
+    //      else
+    //      {
+    //        Text677.Text = ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Nome&quot;)) + &quot; - &quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)) + &quot;: &quot; + AplicarMascaraDeDocumento( ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)) , ((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.NumeroDoDocumento&quot;)).ToString(), true);
+    //      }  
+    //    }
+                                                                     
+    private void Text682_AfterData(object sender, EventArgs e)        
+    {                  
+      Text682.Text = (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Nome&quot;)) + &quot;  &quot; + 
+        ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)) + &quot; &quot; + 
+        AplicarMascaraDeDocumento(((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)),((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.NumeroDoDocumento&quot;)).ToString(), false));  
+    }
+
+    private void Text711_AfterData(object sender, EventArgs e)
+    {
+      if(((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TelefoneDoDevedor.NumeroDoTelefone&quot;)) != null)
+      {
+        Text711.Text = (&quot;(&quot; + ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TelefoneDoDevedor.DDD&quot;)) + &quot;) &quot; + ((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TelefoneDoDevedor.NumeroDoTelefone&quot;)).ToString());
+        if (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TelefoneDoDevedor.Origem&quot;)) == &quot;Avise Me&quot;)
+          Text711.Text += &quot; - Av &quot;;
+        else 
+        {
+          Text711.Text = &quot; &quot;;
+        }
+      }
+    }                                                         
+                                                                 
+    private void Text675_AfterData(object sender, EventArgs e)
+    {                                                                
+      Text675.Text = (((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.Nome&quot;)) + &quot;  &quot; + 
+        ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)) + &quot; &quot; + 
+        AplicarMascaraDeDocumento(((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.TipoDeDocumento&quot;)),((Int64)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoDevedor.NumeroDoDocumento&quot;)).ToString(), false));  
+    }
+      
+
+    private void Text11_AfterData(object sender, EventArgs e)
+    {
+      Text11.Text = ((String)Report.GetColumnValue(&quot;Dados.DadosIntimacoes.Intimacao.DadosDoTitulo.IdentificacaoDaDivida&quot;));
+     }
+
+    private void Text341_AfterData(object sender, EventArgs e)
+    {
+      Text341.Text = &quot;Falta de Pagamento&quot; ;
+    }
+    }
+  }
+ </ScriptText>
+  <Dictionary>
+    <BusinessObjectDataSource Name="Dados" ReferenceName="Dados" DataType="null" Enabled="true">
+      <Column Name="DadosDoCartorio" DataType="null">
+        <Column Name="Codigo" DataType="System.Int32"/>
+        <Column Name="Nome" DataType="System.String"/>
+        <Column Name="TipoDeDocumento" DataType="System.String"/>
+        <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+        <Column Name="Endereco" DataType="null">
+          <Column Name="CEP" DataType="System.Int32"/>
+          <Column Name="Endereco" DataType="System.String"/>
+          <Column Name="NumeroDoEndereco" DataType="System.String"/>
+          <Column Name="Complemento" DataType="System.String"/>
+          <Column Name="Bairro" DataType="System.String"/>
+          <Column Name="Cidade" DataType="System.String"/>
+          <Column Name="Estado" DataType="System.String"/>
+        </Column>
+        <Column Name="Telefones" DataType="System.String"/>
+        <Column Name="Emails" DataType="System.String"/>
+        <Column Name="HorarioDeFuncionamento" DataType="System.String"/>
+        <Column Name="Site" DataType="System.String"/>
+        <Column Name="Logo" DataType="System.Byte[]" BindableControl="Picture"/>
+        <Column Name="ClienteLogisticaID" DataType="System.Guid"/>
+      </Column>
+      <BusinessObjectDataSource Name="BusinessObjectDataSource1" Alias="DadosIntimacoes" DataType="null" PropName="DadosIntimacoes" Enabled="true">
+        <Column Name="Intimacao" DataType="null">
+          <Column Name="DadosDoCartorio" DataType="null">
+            <Column Name="Codigo" DataType="System.Int32"/>
+            <Column Name="Nome" DataType="System.String"/>
+            <Column Name="TipoDeDocumento" DataType="System.String"/>
+            <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+            <Column Name="Endereco" DataType="null">
+              <Column Name="CEP" DataType="System.Int32"/>
+              <Column Name="Endereco" DataType="System.String"/>
+              <Column Name="NumeroDoEndereco" DataType="System.String"/>
+              <Column Name="Complemento" DataType="System.String"/>
+              <Column Name="Bairro" DataType="System.String"/>
+              <Column Name="Cidade" DataType="System.String"/>
+              <Column Name="Estado" DataType="System.String"/>
+              <Column Name="Ordem" DataType="System.Int32"/>
+              <Column Name="Origem" DataType="System.String"/>
+            </Column>
+            <Column Name="Telefones" DataType="System.String"/>
+            <Column Name="Emails" DataType="System.String"/>
+            <Column Name="HorarioDeFuncionamento" DataType="System.String"/>
+            <Column Name="Site" DataType="System.String"/>
+          </Column>
+          <Column Name="DadosDoTitulo" DataType="null">
+            <Column Name="NumeroDoProtocolo" DataType="System.Int32"/>
+            <Column Name="DataDoProtocolo" DataType="System.DateTime"/>
+            <Column Name="CodigoDeBarras" DataType="System.String"/>
+            <Column Name="TipoDoProtesto" DataType="System.String"/>
+            <Column Name="PrazoLimite" DataType="System.DateTime"/>
+            <Column Name="SiglaDaEspecie" DataType="System.String"/>
+            <Column Name="DescricaoDaEspecie" DataType="System.String"/>
+            <Column Name="NumeroDoTitulo" DataType="System.String"/>
+            <Column Name="DataDaEmissao" DataType="System.DateTime"/>
+            <Column Name="DataDoVencimento" DataType="System.Nullable`1[[System.DateTime, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+            <Column Name="DescricaoDoVencimento" DataType="System.String"/>
+            <Column Name="Endosso" DataType="System.String"/>
+            <Column Name="ValorOriginal" DataType="System.Decimal"/>
+            <Column Name="ValorAProtestar" DataType="System.Decimal"/>
+            <Column Name="ChaveUnica" DataType="System.String"/>
+            <Column Name="ProtestoComDireitoDeRegresso" DataType="System.Boolean" BindableControl="CheckBox"/>
+            <Column Name="TipoDaDivida" DataType="System.String"/>
+            <Column Name="IdentificacaoDaDivida" DataType="System.String"/>
+            <Column Name="Origem" DataType="System.String"/>
+            <Column Name="Parcelas" DataType="System.String"/>
+            <Column Name="Aceite" DataType="System.String"/>
+            <BusinessObjectDataSource Name="BusinessObjectDataSource74" Alias="Atos" DataType="null" PropName="Atos" Enabled="true">
+              <Column Name="TipoDeAto" DataType="null">
+                <Column Name="ID" DataType="System.Guid"/>
+                <Column Name="Nome" DataType="System.String"/>
+                <Column Name="NomeAmigavel" DataType="System.String"/>
+                <Column Name="Cor" DataType="System.String"/>
+                <Column Name="Sigla" DataType="System.String"/>
+              </Column>
+              <Column Name="Data" DataType="System.DateTime"/>
+              <Column Name="TipoDeCobranca" DataType="null">
+                <Column Name="Nome" DataType="System.String"/>
+                <Column Name="NaoCobrarIntimacao" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <Column Name="NaoCobrarEdital" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <Column Name="NaoCobrarTaxaDeBoleto" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <Column Name="PorcentagemDeDesconto" DataType="System.Decimal"/>
+                <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <BusinessObjectDataSource Name="BusinessObjectDataSource75" Alias="VerbasDoTipoDeCobranca" DataType="null" PropName="VerbasDoTipoDeCobranca" Enabled="true">
+                  <Column Name="VerbaID" DataType="System.Guid"/>
+                  <Column Name="NomeDaVerba" DataType="System.String"/>
+                  <Column Name="Valor" DataType="System.Decimal"/>
+                  <Column Name="Cobrar" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <Column Name="ApenasRepasse" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <Column Name="Ordem" DataType="System.Int32"/>
+                </BusinessObjectDataSource>
+              </Column>
+              <Column Name="Quantidade" DataType="System.Int32"/>
+              <Column Name="ValorAoCartorio" DataType="System.Decimal"/>
+              <Column Name="ValorTotal" DataType="System.Decimal"/>
+              <BusinessObjectDataSource Name="BusinessObjectDataSource76" Alias="VerbasDoAto" DataType="null" PropName="VerbasDoAto" Enabled="true">
+                <Column Name="VerbaID" DataType="System.Guid"/>
+                <Column Name="NomeDaVerba" DataType="System.String"/>
+                <Column Name="Valor" DataType="System.Decimal"/>
+                <Column Name="Cobrar" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <Column Name="ApenasRepasse" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <Column Name="Ordem" DataType="System.Int32"/>
+              </BusinessObjectDataSource>
+              <BusinessObjectDataSource Name="BusinessObjectDataSource77" Alias="OutrosValoresDoAto" DataType="null" PropName="OutrosValoresDoAto" Enabled="true">
+                <Column Name="Descricao" DataType="System.String"/>
+                <Column Name="Valor" DataType="System.Decimal"/>
+                <Column Name="Quantidade" DataType="System.Int32"/>
+              </BusinessObjectDataSource>
+            </BusinessObjectDataSource>
+          </Column>
+          <BusinessObjectDataSource Name="BusinessObjectDataSource2" Alias="DadosDosApresentantes" DataType="null" PropName="DadosDosApresentantes" Enabled="true">
+            <Column Name="Nome" DataType="System.String"/>
+            <Column Name="TipoDeDocumento" DataType="System.String"/>
+            <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+            <Column Name="CodigoDoApresentante" DataType="System.String"/>
+            <Column Name="Qualificacao" DataType="System.String"/>
+            <Column Name="Endereco" DataType="null">
+              <Column Name="CEP" DataType="System.Int32"/>
+              <Column Name="Endereco" DataType="System.String"/>
+              <Column Name="NumeroDoEndereco" DataType="System.String"/>
+              <Column Name="Complemento" DataType="System.String"/>
+              <Column Name="Bairro" DataType="System.String"/>
+              <Column Name="Cidade" DataType="System.String"/>
+              <Column Name="Estado" DataType="System.String"/>
+              <Column Name="Ordem" DataType="System.Int32"/>
+              <Column Name="Origem" DataType="System.String"/>
+            </Column>
+            <Column Name="Telefones" DataType="System.String"/>
+            <Column Name="TipoDeApresentante" DataType="System.String"/>
+          </BusinessObjectDataSource>
+          <BusinessObjectDataSource Name="BusinessObjectDataSource3" Alias="DadosDosCredores" DataType="null" PropName="DadosDosCredores" Enabled="true">
+            <Column Name="Nome" DataType="System.String"/>
+            <Column Name="TipoDeDocumento" DataType="System.String"/>
+            <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+            <Column Name="Qualificacao" DataType="System.String"/>
+            <Column Name="Endereco" DataType="null">
+              <Column Name="CEP" DataType="System.Int32"/>
+              <Column Name="Endereco" DataType="System.String"/>
+              <Column Name="NumeroDoEndereco" DataType="System.String"/>
+              <Column Name="Complemento" DataType="System.String"/>
+              <Column Name="Bairro" DataType="System.String"/>
+              <Column Name="Cidade" DataType="System.String"/>
+              <Column Name="Estado" DataType="System.String"/>
+              <Column Name="Ordem" DataType="System.Int32"/>
+              <Column Name="Origem" DataType="System.String"/>
+            </Column>
+          </BusinessObjectDataSource>
+          <Column Name="DadosDoDevedor" DataType="null">
+            <Column Name="Nome" DataType="System.String"/>
+            <Column Name="TipoDeDocumento" DataType="System.String"/>
+            <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+            <Column Name="Qualificacao" DataType="System.String"/>
+            <Column Name="Endereco" DataType="null">
+              <Column Name="CEP" DataType="System.Int32"/>
+              <Column Name="Endereco" DataType="System.String"/>
+              <Column Name="NumeroDoEndereco" DataType="System.String"/>
+              <Column Name="Complemento" DataType="System.String"/>
+              <Column Name="Bairro" DataType="System.String"/>
+              <Column Name="Cidade" DataType="System.String"/>
+              <Column Name="Estado" DataType="System.String"/>
+              <Column Name="Ordem" DataType="System.Int32"/>
+              <Column Name="Origem" DataType="System.String"/>
+            </Column>
+            <Column Name="EnderecoAtualizadoDoDevedor" DataType="null">
+              <Column Name="CEP" DataType="System.Int32"/>
+              <Column Name="Endereco" DataType="System.String"/>
+              <Column Name="NumeroDoEndereco" DataType="System.String"/>
+              <Column Name="Complemento" DataType="System.String"/>
+              <Column Name="Bairro" DataType="System.String"/>
+              <Column Name="Cidade" DataType="System.String"/>
+              <Column Name="Estado" DataType="System.String"/>
+              <Column Name="Ordem" DataType="System.Int32"/>
+              <Column Name="Origem" DataType="System.String"/>
+            </Column>
+            <Column Name="PossuiEnderecoAtualizadoDoDevedor" DataType="System.Boolean" BindableControl="CheckBox"/>
+            <Column Name="OrdemDoDevedor" DataType="System.Int32"/>
+            <Column Name="QuantidadeDeDevedores" DataType="System.Int32"/>
+            <Column Name="TipoDeCadastroDoEnderecoAtualizado" DataType="System.String"/>
+            <Column Name="TipoDeDiligencia" DataType="System.String"/>
+            <Column Name="DadosDaReceitaFederal" DataType="null">
+              <Column Name="Data" DataType="System.DateTime"/>
+              <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+              <Column Name="RazaoSocial" DataType="System.String"/>
+              <Column Name="NomeFantasia" DataType="System.String"/>
+              <Column Name="Cep" DataType="System.Int32"/>
+              <Column Name="Endereco" DataType="System.String"/>
+              <Column Name="NumeroDoEndereco" DataType="System.String"/>
+              <Column Name="Complemento" DataType="System.String"/>
+              <Column Name="Bairro" DataType="System.String"/>
+              <Column Name="Cidade" DataType="System.String"/>
+              <Column Name="Estado" DataType="System.String"/>
+              <Column Name="Telefones" DataType="System.String"/>
+              <Column Name="Emails" DataType="System.String"/>
+              <Column Name="Inativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+            </Column>
+            <Column Name="DadosDaCenprot" DataType="null">
+              <Column Name="TipoDeDocumento" DataType="System.String"/>
+              <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+              <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+              <Column Name="Data" DataType="System.DateTime"/>
+              <Column Name="QuantidadeProtestosCIP" DataType="System.Int32"/>
+              <Column Name="QuantidadeCancelamentosCIP" DataType="System.Int32"/>
+            </Column>
+            <Column Name="IntimacaoAnalisadaNaAnaliseDeEnderecos" DataType="System.Boolean" BindableControl="CheckBox"/>
+            <Column Name="CobrarIntimacao" DataType="System.Boolean" BindableControl="CheckBox"/>
+            <Column Name="OrdemDaIntimacao" DataType="System.Int32"/>
+            <Column Name="TelefoneDoDevedor" DataType="null">
+              <Column Name="NumeroDoTelefone" DataType="System.Int64"/>
+              <Column Name="DDD" DataType="System.String"/>
+              <Column Name="Origem" DataType="System.String"/>
+            </Column>
+            <Column Name="QuantidadeDeTitulosDoDevedor" DataType="System.Int32"/>
+          </Column>
+          <Column Name="DadosDasCustas" DataType="null">
+            <Column Name="ValorTotalDasCustas" DataType="System.Decimal"/>
+            <Column Name="ValorTotalDeIntimacao" DataType="System.Decimal"/>
+            <Column Name="ValorTotalDeEdital" DataType="System.Decimal"/>
+            <Column Name="ValorTotalDeTaxaDoBoleto" DataType="System.Decimal"/>
+            <Column Name="ValorTotalDeJuros" DataType="System.Decimal"/>
+            <Column Name="ValorTotalDeTaxaParaCobrancaAdicional" DataType="System.Decimal"/>
+            <Column Name="ValorTotalISS" DataType="System.Decimal"/>
+            <Column Name="ValorTotalDeDevedorAdicional" DataType="System.Decimal"/>
+          </Column>
+          <Column Name="DadosDoBoleto" DataType="null">
+            <Column Name="CodigoDoBanco" DataType="System.Int32"/>
+            <Column Name="DigitoDoBanco" DataType="System.String"/>
+            <Column Name="LinhaDigitavel" DataType="System.String"/>
+            <Column Name="CodigoDeBarras" DataType="System.String"/>
+            <Column Name="NomeDoBanco" DataType="System.String"/>
+            <Column Name="DataDeVencimento" DataType="System.DateTime"/>
+            <Column Name="DataDeEmissao" DataType="System.DateTime"/>
+            <Column Name="Agencia" DataType="System.String"/>
+            <Column Name="NumeroDoContrato" DataType="System.String"/>
+            <Column Name="NumeroDaConta" DataType="System.String"/>
+            <Column Name="DigitoDaConta" DataType="System.String"/>
+            <Column Name="NumeroDoDocumento" DataType="System.String"/>
+            <Column Name="Especie" DataType="System.String"/>
+            <Column Name="Carteira" DataType="System.String"/>
+            <Column Name="NossoNumero" DataType="System.String"/>
+            <Column Name="DigitoNossoNumero" DataType="System.String"/>
+            <Column Name="ValorJuros" DataType="System.Decimal"/>
+            <Column Name="ValorMulta" DataType="System.Decimal"/>
+            <Column Name="ValorDesconto" DataType="System.Decimal"/>
+            <Column Name="OutrosAcrescimos" DataType="System.Decimal"/>
+            <Column Name="ValorDoBoleto" DataType="System.Decimal"/>
+            <Column Name="Instrucoes" DataType="System.String"/>
+            <Column Name="CodigoDoBeneficiario" DataType="System.String"/>
+            <Column Name="LogoDoBanco" DataType="System.Byte[]" BindableControl="Picture"/>
+            <Column Name="NossoNumeroParaExibicao" DataType="System.String"/>
+            <Column Name="QrCodePagamento" DataType="System.String"/>
+            <Column Name="LinkDePagamento" DataType="System.String"/>
+          </Column>
+          <BusinessObjectDataSource Name="BusinessObjectDataSource4" Alias="AssessoriasDoDevedor" DataType="null" PropName="AssessoriasDoDevedor" Enabled="true">
+            <Column Name="Nome" DataType="System.String"/>
+            <Column Name="TipoDeDocumento" DataType="System.String"/>
+            <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+            <Column Name="Endereco" DataType="null">
+              <Column Name="CEP" DataType="System.Int32"/>
+              <Column Name="Endereco" DataType="System.String"/>
+              <Column Name="NumeroDoEndereco" DataType="System.String"/>
+              <Column Name="Complemento" DataType="System.String"/>
+              <Column Name="Bairro" DataType="System.String"/>
+              <Column Name="Cidade" DataType="System.String"/>
+              <Column Name="Estado" DataType="System.String"/>
+              <Column Name="Ordem" DataType="System.Int32"/>
+              <Column Name="Origem" DataType="System.String"/>
+            </Column>
+            <Column Name="Codigo" DataType="System.String"/>
+          </BusinessObjectDataSource>
+          <Column Name="CodigoDeBarrasDaIntimacao" DataType="System.String"/>
+          <Column Name="DataParaDistribuicao" DataType="System.DateTime"/>
+          <Column Name="Faixa" DataType="System.Int32"/>
+        </Column>
+        <Column Name="Rota" DataType="null">
+          <Column Name="ClienteID" DataType="System.Guid"/>
+          <Column Name="Nome" DataType="System.String"/>
+          <Column Name="Cliente" DataType="null">
+            <Column Name="Sigla" DataType="System.String"/>
+            <Column Name="SequenciaDoObjeto" DataType="System.Int32"/>
+            <Column Name="Foto" DataType="System.String"/>
+            <Column Name="Participante" DataType="null">
+              <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+              <Column Name="Data" DataType="System.DateTime"/>
+              <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+              <Column Name="QualificacaoID" DataType="System.Guid"/>
+              <Column Name="Nome" DataType="System.String"/>
+              <Column Name="Emails" DataType="System.String"/>
+              <Column Name="Telefones" DataType="System.String"/>
+              <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+              <Column Name="Profissao" DataType="System.String"/>
+              <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+              <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+              <Column Name="Nacionalidade" DataType="System.String"/>
+              <Column Name="Pessoa" DataType="null">
+                <Column Name="TipoDeDocumento" DataType="System.String"/>
+                <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                <Column Name="Data" DataType="System.DateTime"/>
+                <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <Column Name="ID" DataType="System.Guid"/>
+                <Column Name="ValidationResult" DataType="null">
+                  <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <BusinessObjectDataSource Name="BusinessObjectDataSource5" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                    <Column Name="Length" DataType="System.Int32"/>
+                  </BusinessObjectDataSource>
+                  <Column Name="MessageSuccess" DataType="System.String"/>
+                </Column>
+              </Column>
+              <Column Name="TipoDeParticipacao" DataType="null">
+                <Column Name="Nome" DataType="System.String"/>
+                <Column Name="ID" DataType="System.Guid"/>
+                <Column Name="ValidationResult" DataType="null">
+                  <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <BusinessObjectDataSource Name="BusinessObjectDataSource6" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                    <Column Name="Length" DataType="System.Int32"/>
+                  </BusinessObjectDataSource>
+                  <Column Name="MessageSuccess" DataType="System.String"/>
+                </Column>
+              </Column>
+              <Column Name="Qualificacao" DataType="null">
+                <Column Name="Nome" DataType="System.String"/>
+                <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <Column Name="TipoDeParticipacao" DataType="null">
+                  <Column Name="Nome" DataType="System.String"/>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource7" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+                <Column Name="ID" DataType="System.Guid"/>
+                <Column Name="ValidationResult" DataType="null">
+                  <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <BusinessObjectDataSource Name="BusinessObjectDataSource8" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                    <Column Name="Length" DataType="System.Int32"/>
+                  </BusinessObjectDataSource>
+                  <Column Name="MessageSuccess" DataType="System.String"/>
+                </Column>
+              </Column>
+              <Column Name="ID" DataType="System.Guid"/>
+              <Column Name="ValidationResult" DataType="null">
+                <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <BusinessObjectDataSource Name="BusinessObjectDataSource9" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                  <Column Name="Length" DataType="System.Int32"/>
+                </BusinessObjectDataSource>
+                <Column Name="MessageSuccess" DataType="System.String"/>
+              </Column>
+              <Column Name="Endereco" DataType="null">
+                <Column Name="ParticipanteID" DataType="System.Guid"/>
+                <Column Name="Cep" DataType="System.Int32"/>
+                <Column Name="Endereco" DataType="System.String"/>
+                <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                <Column Name="Complemento" DataType="System.String"/>
+                <Column Name="Bairro" DataType="System.String"/>
+                <Column Name="Cidade" DataType="System.String"/>
+                <Column Name="Estado" DataType="System.String"/>
+                <Column Name="Ordem" DataType="System.Int32"/>
+                <Column Name="Participante" DataType="null">
+                  <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                  <Column Name="Data" DataType="System.DateTime"/>
+                  <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                  <Column Name="QualificacaoID" DataType="System.Guid"/>
+                  <Column Name="Nome" DataType="System.String"/>
+                  <Column Name="Emails" DataType="System.String"/>
+                  <Column Name="Telefones" DataType="System.String"/>
+                  <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <Column Name="Profissao" DataType="System.String"/>
+                  <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                  <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                  <Column Name="Nacionalidade" DataType="System.String"/>
+                  <Column Name="Pessoa" DataType="null">
+                    <Column Name="TipoDeDocumento" DataType="System.String"/>
+                    <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                    <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                    <Column Name="Data" DataType="System.DateTime"/>
+                    <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource45" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="TipoDeParticipacao" DataType="null">
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource46" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="Qualificacao" DataType="null">
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                    <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <Column Name="TipoDeParticipacao" DataType="null">
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource47" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource48" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="Endereco" DataType="null">
+                    <Column Name="ParticipanteID" DataType="System.Guid"/>
+                    <Column Name="Cep" DataType="System.Int32"/>
+                    <Column Name="Endereco" DataType="System.String"/>
+                    <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                    <Column Name="Complemento" DataType="System.String"/>
+                    <Column Name="Bairro" DataType="System.String"/>
+                    <Column Name="Cidade" DataType="System.String"/>
+                    <Column Name="Estado" DataType="System.String"/>
+                    <Column Name="Ordem" DataType="System.Int32"/>
+                    <Column Name="Participante" DataType="null">
+                      <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                      <Column Name="Data" DataType="System.DateTime"/>
+                      <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                      <Column Name="QualificacaoID" DataType="System.Guid"/>
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="Emails" DataType="System.String"/>
+                      <Column Name="Telefones" DataType="System.String"/>
+                      <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="Profissao" DataType="System.String"/>
+                      <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                      <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                      <Column Name="Nacionalidade" DataType="System.String"/>
+                      <Column Name="Pessoa" DataType="null">
+                        <Column Name="TipoDeDocumento" DataType="System.String"/>
+                        <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                        <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                        <Column Name="Data" DataType="System.DateTime"/>
+                        <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="TipoDeParticipacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="Qualificacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                        <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="TipoDeParticipacao" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="Endereco" DataType="null">
+                        <Column Name="ParticipanteID" DataType="System.Guid"/>
+                        <Column Name="Cep" DataType="System.Int32"/>
+                        <Column Name="Endereco" DataType="System.String"/>
+                        <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                        <Column Name="Complemento" DataType="System.String"/>
+                        <Column Name="Bairro" DataType="System.String"/>
+                        <Column Name="Cidade" DataType="System.String"/>
+                        <Column Name="Estado" DataType="System.String"/>
+                        <Column Name="Ordem" DataType="System.Int32"/>
+                        <Column Name="Participante" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource49" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource50" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource51" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+                <Column Name="ID" DataType="System.Guid"/>
+                <Column Name="ValidationResult" DataType="null">
+                  <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <BusinessObjectDataSource Name="BusinessObjectDataSource52" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                    <Column Name="Length" DataType="System.Int32"/>
+                  </BusinessObjectDataSource>
+                  <Column Name="MessageSuccess" DataType="System.String"/>
+                </Column>
+              </Column>
+            </Column>
+            <BusinessObjectDataSource Name="BusinessObjectDataSource10" Alias="Enderecos" DataType="null" PropName="Enderecos" Enabled="true">
+              <Column Name="ParticipanteID" DataType="System.Guid"/>
+              <Column Name="Cep" DataType="System.Int32"/>
+              <Column Name="Endereco" DataType="System.String"/>
+              <Column Name="NumeroDoEndereco" DataType="System.String"/>
+              <Column Name="Complemento" DataType="System.String"/>
+              <Column Name="Bairro" DataType="System.String"/>
+              <Column Name="Cidade" DataType="System.String"/>
+              <Column Name="Estado" DataType="System.String"/>
+              <Column Name="Ordem" DataType="System.Int32"/>
+              <Column Name="Participante" DataType="null">
+                <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                <Column Name="Data" DataType="System.DateTime"/>
+                <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                <Column Name="QualificacaoID" DataType="System.Guid"/>
+                <Column Name="Nome" DataType="System.String"/>
+                <Column Name="Emails" DataType="System.String"/>
+                <Column Name="Telefones" DataType="System.String"/>
+                <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <Column Name="Profissao" DataType="System.String"/>
+                <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                <Column Name="Nacionalidade" DataType="System.String"/>
+                <Column Name="Pessoa" DataType="null">
+                  <Column Name="TipoDeDocumento" DataType="System.String"/>
+                  <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                  <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                  <Column Name="Data" DataType="System.DateTime"/>
+                  <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource11" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+                <Column Name="TipoDeParticipacao" DataType="null">
+                  <Column Name="Nome" DataType="System.String"/>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource12" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+                <Column Name="Qualificacao" DataType="null">
+                  <Column Name="Nome" DataType="System.String"/>
+                  <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                  <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <Column Name="TipoDeParticipacao" DataType="null">
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource13" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource14" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+                <Column Name="ID" DataType="System.Guid"/>
+                <Column Name="ValidationResult" DataType="null">
+                  <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <BusinessObjectDataSource Name="BusinessObjectDataSource15" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                    <Column Name="Length" DataType="System.Int32"/>
+                  </BusinessObjectDataSource>
+                  <Column Name="MessageSuccess" DataType="System.String"/>
+                </Column>
+                <Column Name="Endereco" DataType="null">
+                  <Column Name="ParticipanteID" DataType="System.Guid"/>
+                  <Column Name="Cep" DataType="System.Int32"/>
+                  <Column Name="Endereco" DataType="System.String"/>
+                  <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                  <Column Name="Complemento" DataType="System.String"/>
+                  <Column Name="Bairro" DataType="System.String"/>
+                  <Column Name="Cidade" DataType="System.String"/>
+                  <Column Name="Estado" DataType="System.String"/>
+                  <Column Name="Ordem" DataType="System.Int32"/>
+                  <Column Name="Participante" DataType="null">
+                    <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                    <Column Name="Data" DataType="System.DateTime"/>
+                    <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                    <Column Name="QualificacaoID" DataType="System.Guid"/>
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="Emails" DataType="System.String"/>
+                    <Column Name="Telefones" DataType="System.String"/>
+                    <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <Column Name="Profissao" DataType="System.String"/>
+                    <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                    <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                    <Column Name="Nacionalidade" DataType="System.String"/>
+                    <Column Name="Pessoa" DataType="null">
+                      <Column Name="TipoDeDocumento" DataType="System.String"/>
+                      <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                      <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                      <Column Name="Data" DataType="System.DateTime"/>
+                      <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource53" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="TipoDeParticipacao" DataType="null">
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource54" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="Qualificacao" DataType="null">
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                      <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="TipoDeParticipacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource55" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="Endereco" DataType="null">
+                      <Column Name="ParticipanteID" DataType="System.Guid"/>
+                      <Column Name="Cep" DataType="System.Int32"/>
+                      <Column Name="Endereco" DataType="System.String"/>
+                      <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                      <Column Name="Complemento" DataType="System.String"/>
+                      <Column Name="Bairro" DataType="System.String"/>
+                      <Column Name="Cidade" DataType="System.String"/>
+                      <Column Name="Estado" DataType="System.String"/>
+                      <Column Name="Ordem" DataType="System.Int32"/>
+                      <Column Name="Participante" DataType="null">
+                        <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                        <Column Name="Data" DataType="System.DateTime"/>
+                        <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                        <Column Name="QualificacaoID" DataType="System.Guid"/>
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="Emails" DataType="System.String"/>
+                        <Column Name="Telefones" DataType="System.String"/>
+                        <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="Profissao" DataType="System.String"/>
+                        <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="Nacionalidade" DataType="System.String"/>
+                        <Column Name="Pessoa" Enabled="false" DataType="null"/>
+                        <Column Name="TipoDeParticipacao" Enabled="false" DataType="null"/>
+                        <Column Name="Qualificacao" Enabled="false" DataType="null"/>
+                        <Column Name="Endereco" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource56" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource57" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource58" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+              </Column>
+              <Column Name="ID" DataType="System.Guid"/>
+              <Column Name="ValidationResult" DataType="null">
+                <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <BusinessObjectDataSource Name="BusinessObjectDataSource16" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                  <Column Name="Length" DataType="System.Int32"/>
+                </BusinessObjectDataSource>
+                <Column Name="MessageSuccess" DataType="System.String"/>
+              </Column>
+            </BusinessObjectDataSource>
+            <Column Name="Usuario" DataType="null">
+              <Column Name="Email" DataType="System.String"/>
+              <Column Name="Nome" DataType="System.String"/>
+              <Column Name="Documento" DataType="System.String"/>
+              <Column Name="Usuario" DataType="System.String"/>
+              <Column Name="Senha" DataType="System.String"/>
+              <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+              <Column Name="GruposDeAcesso" DataType="System.String"/>
+              <Column Name="Foto" DataType="System.String"/>
+              <Column Name="UsuariosCompartilhandoAtalhos" DataType="System.String"/>
+              <Column Name="TiposDeUsuario" DataType="System.String"/>
+              <Column Name="Cargo" DataType="System.String"/>
+              <Column Name="UsuarioDoAmbiente" DataType="null">
+                <Column Name="UsuarioID" DataType="System.Guid"/>
+                <Column Name="IdentificacaoDeOrigemID" DataType="System.Guid"/>
+                <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+                <Column Name="Usuarios" DataType="null">
+                  <Column Name="Email" DataType="System.String"/>
+                  <Column Name="Nome" DataType="System.String"/>
+                  <Column Name="Documento" DataType="System.String"/>
+                  <Column Name="Usuario" DataType="System.String"/>
+                  <Column Name="Senha" DataType="System.String"/>
+                  <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+                  <Column Name="GruposDeAcesso" DataType="System.String"/>
+                  <Column Name="Foto" DataType="System.String"/>
+                  <Column Name="UsuariosCompartilhandoAtalhos" DataType="System.String"/>
+                  <Column Name="TiposDeUsuario" DataType="System.String"/>
+                  <Column Name="Cargo" DataType="System.String"/>
+                  <Column Name="UsuarioDoAmbiente" DataType="null">
+                    <Column Name="UsuarioID" DataType="System.Guid"/>
+                    <Column Name="IdentificacaoDeOrigemID" DataType="System.Guid"/>
+                    <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+                    <Column Name="Usuarios" DataType="null">
+                      <Column Name="Email" DataType="System.String"/>
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="Documento" DataType="System.String"/>
+                      <Column Name="Usuario" DataType="System.String"/>
+                      <Column Name="Senha" DataType="System.String"/>
+                      <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+                      <Column Name="GruposDeAcesso" DataType="System.String"/>
+                      <Column Name="Foto" DataType="System.String"/>
+                      <Column Name="UsuariosCompartilhandoAtalhos" DataType="System.String"/>
+                      <Column Name="TiposDeUsuario" DataType="System.String"/>
+                      <Column Name="Cargo" DataType="System.String"/>
+                      <Column Name="UsuarioDoAmbiente" DataType="null">
+                        <Column Name="UsuarioID" DataType="System.Guid"/>
+                        <Column Name="IdentificacaoDeOrigemID" DataType="System.Guid"/>
+                        <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+                        <Column Name="Usuarios" Enabled="false" DataType="null"/>
+                        <Column Name="Cliente" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource17" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                      <Column Name="RedefinirSenha" DataType="System.Nullable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                      <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    </Column>
+                    <Column Name="Cliente" DataType="null">
+                      <Column Name="Sigla" DataType="System.String"/>
+                      <Column Name="SequenciaDoObjeto" DataType="System.Int32"/>
+                      <Column Name="Foto" DataType="System.String"/>
+                      <Column Name="Participante" DataType="null">
+                        <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                        <Column Name="Data" DataType="System.DateTime"/>
+                        <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                        <Column Name="QualificacaoID" DataType="System.Guid"/>
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="Emails" DataType="System.String"/>
+                        <Column Name="Telefones" DataType="System.String"/>
+                        <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="Profissao" DataType="System.String"/>
+                        <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="Nacionalidade" DataType="System.String"/>
+                        <Column Name="Pessoa" Enabled="false" DataType="null"/>
+                        <Column Name="TipoDeParticipacao" Enabled="false" DataType="null"/>
+                        <Column Name="Qualificacao" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                        <Column Name="Endereco" Enabled="false" DataType="null"/>
+                      </Column>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource18" Alias="Enderecos" DataType="null" PropName="Enderecos" Enabled="true">
+                        <Column Name="ParticipanteID" DataType="System.Guid"/>
+                        <Column Name="Cep" DataType="System.Int32"/>
+                        <Column Name="Endereco" DataType="System.String"/>
+                        <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                        <Column Name="Complemento" DataType="System.String"/>
+                        <Column Name="Bairro" DataType="System.String"/>
+                        <Column Name="Cidade" DataType="System.String"/>
+                        <Column Name="Estado" DataType="System.String"/>
+                        <Column Name="Ordem" DataType="System.Int32"/>
+                        <Column Name="Participante" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="Usuario" DataType="null">
+                        <Column Name="Email" DataType="System.String"/>
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="Documento" DataType="System.String"/>
+                        <Column Name="Usuario" DataType="System.String"/>
+                        <Column Name="Senha" DataType="System.String"/>
+                        <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+                        <Column Name="GruposDeAcesso" DataType="System.String"/>
+                        <Column Name="Foto" DataType="System.String"/>
+                        <Column Name="UsuariosCompartilhandoAtalhos" DataType="System.String"/>
+                        <Column Name="TiposDeUsuario" DataType="System.String"/>
+                        <Column Name="Cargo" DataType="System.String"/>
+                        <Column Name="UsuarioDoAmbiente" Enabled="false" DataType="null"/>
+                        <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                        <Column Name="RedefinirSenha" DataType="System.Nullable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                        <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      </Column>
+                      <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                      <Column Name="Data" DataType="System.DateTime"/>
+                      <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                      <Column Name="QualificacaoID" DataType="System.Guid"/>
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="Emails" DataType="System.String"/>
+                      <Column Name="Telefones" DataType="System.String"/>
+                      <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="Profissao" DataType="System.String"/>
+                      <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                      <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                      <Column Name="Nacionalidade" DataType="System.String"/>
+                      <Column Name="Pessoa" DataType="null">
+                        <Column Name="TipoDeDocumento" DataType="System.String"/>
+                        <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                        <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                        <Column Name="Data" DataType="System.DateTime"/>
+                        <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="TipoDeParticipacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="Qualificacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                        <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="TipoDeParticipacao" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource19" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                      <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+                      <Column Name="Endereco" DataType="null">
+                        <Column Name="ParticipanteID" DataType="System.Guid"/>
+                        <Column Name="Cep" DataType="System.Int32"/>
+                        <Column Name="Endereco" DataType="System.String"/>
+                        <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                        <Column Name="Complemento" DataType="System.String"/>
+                        <Column Name="Bairro" DataType="System.String"/>
+                        <Column Name="Cidade" DataType="System.String"/>
+                        <Column Name="Estado" DataType="System.String"/>
+                        <Column Name="Ordem" DataType="System.Int32"/>
+                        <Column Name="Participante" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource20" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource21" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                  <Column Name="RedefinirSenha" DataType="System.Nullable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                  <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                </Column>
+                <Column Name="Cliente" DataType="null">
+                  <Column Name="Sigla" DataType="System.String"/>
+                  <Column Name="SequenciaDoObjeto" DataType="System.Int32"/>
+                  <Column Name="Foto" DataType="System.String"/>
+                  <Column Name="Participante" DataType="null">
+                    <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                    <Column Name="Data" DataType="System.DateTime"/>
+                    <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                    <Column Name="QualificacaoID" DataType="System.Guid"/>
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="Emails" DataType="System.String"/>
+                    <Column Name="Telefones" DataType="System.String"/>
+                    <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <Column Name="Profissao" DataType="System.String"/>
+                    <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                    <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                    <Column Name="Nacionalidade" DataType="System.String"/>
+                    <Column Name="Pessoa" DataType="null">
+                      <Column Name="TipoDeDocumento" DataType="System.String"/>
+                      <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                      <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                      <Column Name="Data" DataType="System.DateTime"/>
+                      <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource22" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="TipoDeParticipacao" DataType="null">
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource23" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="Qualificacao" DataType="null">
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                      <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="TipoDeParticipacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource24" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource25" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                    <Column Name="Endereco" DataType="null">
+                      <Column Name="ParticipanteID" DataType="System.Guid"/>
+                      <Column Name="Cep" DataType="System.Int32"/>
+                      <Column Name="Endereco" DataType="System.String"/>
+                      <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                      <Column Name="Complemento" DataType="System.String"/>
+                      <Column Name="Bairro" DataType="System.String"/>
+                      <Column Name="Cidade" DataType="System.String"/>
+                      <Column Name="Estado" DataType="System.String"/>
+                      <Column Name="Ordem" DataType="System.Int32"/>
+                      <Column Name="Participante" DataType="null">
+                        <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                        <Column Name="Data" DataType="System.DateTime"/>
+                        <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                        <Column Name="QualificacaoID" DataType="System.Guid"/>
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="Emails" DataType="System.String"/>
+                        <Column Name="Telefones" DataType="System.String"/>
+                        <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="Profissao" DataType="System.String"/>
+                        <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="Nacionalidade" DataType="System.String"/>
+                        <Column Name="Pessoa" Enabled="false" DataType="null"/>
+                        <Column Name="TipoDeParticipacao" Enabled="false" DataType="null"/>
+                        <Column Name="Qualificacao" Enabled="false" DataType="null"/>
+                        <Column Name="Endereco" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource59" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                  </Column>
+                  <BusinessObjectDataSource Name="BusinessObjectDataSource26" Alias="Enderecos" DataType="null" PropName="Enderecos" Enabled="true">
+                    <Column Name="ParticipanteID" DataType="System.Guid"/>
+                    <Column Name="Cep" DataType="System.Int32"/>
+                    <Column Name="Endereco" DataType="System.String"/>
+                    <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                    <Column Name="Complemento" DataType="System.String"/>
+                    <Column Name="Bairro" DataType="System.String"/>
+                    <Column Name="Cidade" DataType="System.String"/>
+                    <Column Name="Estado" DataType="System.String"/>
+                    <Column Name="Ordem" DataType="System.Int32"/>
+                    <Column Name="Participante" DataType="null">
+                      <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                      <Column Name="Data" DataType="System.DateTime"/>
+                      <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                      <Column Name="QualificacaoID" DataType="System.Guid"/>
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="Emails" DataType="System.String"/>
+                      <Column Name="Telefones" DataType="System.String"/>
+                      <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="Profissao" DataType="System.String"/>
+                      <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                      <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                      <Column Name="Nacionalidade" DataType="System.String"/>
+                      <Column Name="Pessoa" DataType="null">
+                        <Column Name="TipoDeDocumento" DataType="System.String"/>
+                        <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                        <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                        <Column Name="Data" DataType="System.DateTime"/>
+                        <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="TipoDeParticipacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="Qualificacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                        <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="TipoDeParticipacao" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource27" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                      <Column Name="Endereco" DataType="null">
+                        <Column Name="ParticipanteID" DataType="System.Guid"/>
+                        <Column Name="Cep" DataType="System.Int32"/>
+                        <Column Name="Endereco" DataType="System.String"/>
+                        <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                        <Column Name="Complemento" DataType="System.String"/>
+                        <Column Name="Bairro" DataType="System.String"/>
+                        <Column Name="Cidade" DataType="System.String"/>
+                        <Column Name="Estado" DataType="System.String"/>
+                        <Column Name="Ordem" DataType="System.Int32"/>
+                        <Column Name="Participante" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource28" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </BusinessObjectDataSource>
+                  <Column Name="Usuario" DataType="null">
+                    <Column Name="Email" DataType="System.String"/>
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="Documento" DataType="System.String"/>
+                    <Column Name="Usuario" DataType="System.String"/>
+                    <Column Name="Senha" DataType="System.String"/>
+                    <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+                    <Column Name="GruposDeAcesso" DataType="System.String"/>
+                    <Column Name="Foto" DataType="System.String"/>
+                    <Column Name="UsuariosCompartilhandoAtalhos" DataType="System.String"/>
+                    <Column Name="TiposDeUsuario" DataType="System.String"/>
+                    <Column Name="Cargo" DataType="System.String"/>
+                    <Column Name="UsuarioDoAmbiente" DataType="null">
+                      <Column Name="UsuarioID" DataType="System.Guid"/>
+                      <Column Name="IdentificacaoDeOrigemID" DataType="System.Guid"/>
+                      <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+                      <Column Name="Usuarios" DataType="null">
+                        <Column Name="Email" DataType="System.String"/>
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="Documento" DataType="System.String"/>
+                        <Column Name="Usuario" DataType="System.String"/>
+                        <Column Name="Senha" DataType="System.String"/>
+                        <Column Name="AmbienteDeGestaoID" DataType="System.Guid"/>
+                        <Column Name="GruposDeAcesso" DataType="System.String"/>
+                        <Column Name="Foto" DataType="System.String"/>
+                        <Column Name="UsuariosCompartilhandoAtalhos" DataType="System.String"/>
+                        <Column Name="TiposDeUsuario" DataType="System.String"/>
+                        <Column Name="Cargo" DataType="System.String"/>
+                        <Column Name="UsuarioDoAmbiente" Enabled="false" DataType="null"/>
+                        <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                        <Column Name="RedefinirSenha" DataType="System.Nullable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                        <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      </Column>
+                      <Column Name="Cliente" DataType="null">
+                        <Column Name="Sigla" DataType="System.String"/>
+                        <Column Name="SequenciaDoObjeto" DataType="System.Int32"/>
+                        <Column Name="Foto" DataType="System.String"/>
+                        <Column Name="Participante" Enabled="false" DataType="null"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource29" Alias="Enderecos" Enabled="false" DataType="null" PropName="Enderecos"/>
+                        <Column Name="Usuario" Enabled="false" DataType="null"/>
+                        <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                        <Column Name="Data" DataType="System.DateTime"/>
+                        <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                        <Column Name="QualificacaoID" DataType="System.Guid"/>
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="Emails" DataType="System.String"/>
+                        <Column Name="Telefones" DataType="System.String"/>
+                        <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="Profissao" DataType="System.String"/>
+                        <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="Nacionalidade" DataType="System.String"/>
+                        <Column Name="Pessoa" Enabled="false" DataType="null"/>
+                        <Column Name="TipoDeParticipacao" Enabled="false" DataType="null"/>
+                        <Column Name="Qualificacao" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                        <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+                        <Column Name="Endereco" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource30" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource31" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                    <Column Name="RedefinirSenha" DataType="System.Nullable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                    <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  </Column>
+                  <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                  <Column Name="Data" DataType="System.DateTime"/>
+                  <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                  <Column Name="QualificacaoID" DataType="System.Guid"/>
+                  <Column Name="Nome" DataType="System.String"/>
+                  <Column Name="Emails" DataType="System.String"/>
+                  <Column Name="Telefones" DataType="System.String"/>
+                  <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <Column Name="Profissao" DataType="System.String"/>
+                  <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                  <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                  <Column Name="Nacionalidade" DataType="System.String"/>
+                  <Column Name="Pessoa" DataType="null">
+                    <Column Name="TipoDeDocumento" DataType="System.String"/>
+                    <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                    <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                    <Column Name="Data" DataType="System.DateTime"/>
+                    <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource32" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="TipoDeParticipacao" DataType="null">
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource33" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="Qualificacao" DataType="null">
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                    <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <Column Name="TipoDeParticipacao" DataType="null">
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource34" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource35" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource36" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                  <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+                  <Column Name="Endereco" DataType="null">
+                    <Column Name="ParticipanteID" DataType="System.Guid"/>
+                    <Column Name="Cep" DataType="System.Int32"/>
+                    <Column Name="Endereco" DataType="System.String"/>
+                    <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                    <Column Name="Complemento" DataType="System.String"/>
+                    <Column Name="Bairro" DataType="System.String"/>
+                    <Column Name="Cidade" DataType="System.String"/>
+                    <Column Name="Estado" DataType="System.String"/>
+                    <Column Name="Ordem" DataType="System.Int32"/>
+                    <Column Name="Participante" DataType="null">
+                      <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                      <Column Name="Data" DataType="System.DateTime"/>
+                      <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                      <Column Name="QualificacaoID" DataType="System.Guid"/>
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="Emails" DataType="System.String"/>
+                      <Column Name="Telefones" DataType="System.String"/>
+                      <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="Profissao" DataType="System.String"/>
+                      <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                      <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                      <Column Name="Nacionalidade" DataType="System.String"/>
+                      <Column Name="Pessoa" DataType="null">
+                        <Column Name="TipoDeDocumento" DataType="System.String"/>
+                        <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                        <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                        <Column Name="Data" DataType="System.DateTime"/>
+                        <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="TipoDeParticipacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="Qualificacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                        <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="TipoDeParticipacao" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="Endereco" DataType="null">
+                        <Column Name="ParticipanteID" DataType="System.Guid"/>
+                        <Column Name="Cep" DataType="System.Int32"/>
+                        <Column Name="Endereco" DataType="System.String"/>
+                        <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                        <Column Name="Complemento" DataType="System.String"/>
+                        <Column Name="Bairro" DataType="System.String"/>
+                        <Column Name="Cidade" DataType="System.String"/>
+                        <Column Name="Estado" DataType="System.String"/>
+                        <Column Name="Ordem" DataType="System.Int32"/>
+                        <Column Name="Participante" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource60" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource61" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                </Column>
+                <Column Name="ID" DataType="System.Guid"/>
+                <Column Name="ValidationResult" DataType="null">
+                  <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <BusinessObjectDataSource Name="BusinessObjectDataSource37" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                    <Column Name="Length" DataType="System.Int32"/>
+                  </BusinessObjectDataSource>
+                  <Column Name="MessageSuccess" DataType="System.String"/>
+                </Column>
+              </Column>
+              <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+              <Column Name="ID" DataType="System.Guid"/>
+              <Column Name="ValidationResult" DataType="null">
+                <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <BusinessObjectDataSource Name="BusinessObjectDataSource38" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                  <Column Name="Length" DataType="System.Int32"/>
+                </BusinessObjectDataSource>
+                <Column Name="MessageSuccess" DataType="System.String"/>
+              </Column>
+              <Column Name="RedefinirSenha" DataType="System.Nullable`1[[System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+              <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+            </Column>
+            <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+            <Column Name="Data" DataType="System.DateTime"/>
+            <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+            <Column Name="QualificacaoID" DataType="System.Guid"/>
+            <Column Name="Nome" DataType="System.String"/>
+            <Column Name="Emails" DataType="System.String"/>
+            <Column Name="Telefones" DataType="System.String"/>
+            <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+            <Column Name="Profissao" DataType="System.String"/>
+            <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+            <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+            <Column Name="Nacionalidade" DataType="System.String"/>
+            <Column Name="Pessoa" DataType="null">
+              <Column Name="TipoDeDocumento" DataType="System.String"/>
+              <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+              <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+              <Column Name="Data" DataType="System.DateTime"/>
+              <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+              <Column Name="ID" DataType="System.Guid"/>
+              <Column Name="ValidationResult" DataType="null">
+                <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <BusinessObjectDataSource Name="BusinessObjectDataSource39" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                  <Column Name="Length" DataType="System.Int32"/>
+                </BusinessObjectDataSource>
+                <Column Name="MessageSuccess" DataType="System.String"/>
+              </Column>
+            </Column>
+            <Column Name="TipoDeParticipacao" DataType="null">
+              <Column Name="Nome" DataType="System.String"/>
+              <Column Name="ID" DataType="System.Guid"/>
+              <Column Name="ValidationResult" DataType="null">
+                <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <BusinessObjectDataSource Name="BusinessObjectDataSource40" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                  <Column Name="Length" DataType="System.Int32"/>
+                </BusinessObjectDataSource>
+                <Column Name="MessageSuccess" DataType="System.String"/>
+              </Column>
+            </Column>
+            <Column Name="Qualificacao" DataType="null">
+              <Column Name="Nome" DataType="System.String"/>
+              <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+              <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+              <Column Name="TipoDeParticipacao" DataType="null">
+                <Column Name="Nome" DataType="System.String"/>
+                <Column Name="ID" DataType="System.Guid"/>
+                <Column Name="ValidationResult" DataType="null">
+                  <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <BusinessObjectDataSource Name="BusinessObjectDataSource41" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                    <Column Name="Length" DataType="System.Int32"/>
+                  </BusinessObjectDataSource>
+                  <Column Name="MessageSuccess" DataType="System.String"/>
+                </Column>
+              </Column>
+              <Column Name="ID" DataType="System.Guid"/>
+              <Column Name="ValidationResult" DataType="null">
+                <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <BusinessObjectDataSource Name="BusinessObjectDataSource42" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                  <Column Name="Length" DataType="System.Int32"/>
+                </BusinessObjectDataSource>
+                <Column Name="MessageSuccess" DataType="System.String"/>
+              </Column>
+            </Column>
+            <Column Name="ID" DataType="System.Guid"/>
+            <Column Name="ValidationResult" DataType="null">
+              <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+              <BusinessObjectDataSource Name="BusinessObjectDataSource43" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                <Column Name="Length" DataType="System.Int32"/>
+              </BusinessObjectDataSource>
+              <Column Name="MessageSuccess" DataType="System.String"/>
+            </Column>
+            <Column Name="ImagemFoto" DataType="System.Byte[]" BindableControl="Picture"/>
+            <Column Name="Endereco" DataType="null">
+              <Column Name="ParticipanteID" DataType="System.Guid"/>
+              <Column Name="Cep" DataType="System.Int32"/>
+              <Column Name="Endereco" DataType="System.String"/>
+              <Column Name="NumeroDoEndereco" DataType="System.String"/>
+              <Column Name="Complemento" DataType="System.String"/>
+              <Column Name="Bairro" DataType="System.String"/>
+              <Column Name="Cidade" DataType="System.String"/>
+              <Column Name="Estado" DataType="System.String"/>
+              <Column Name="Ordem" DataType="System.Int32"/>
+              <Column Name="Participante" DataType="null">
+                <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                <Column Name="Data" DataType="System.DateTime"/>
+                <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                <Column Name="QualificacaoID" DataType="System.Guid"/>
+                <Column Name="Nome" DataType="System.String"/>
+                <Column Name="Emails" DataType="System.String"/>
+                <Column Name="Telefones" DataType="System.String"/>
+                <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <Column Name="Profissao" DataType="System.String"/>
+                <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                <Column Name="Nacionalidade" DataType="System.String"/>
+                <Column Name="Pessoa" DataType="null">
+                  <Column Name="TipoDeDocumento" DataType="System.String"/>
+                  <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                  <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                  <Column Name="Data" DataType="System.DateTime"/>
+                  <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource62" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+                <Column Name="TipoDeParticipacao" DataType="null">
+                  <Column Name="Nome" DataType="System.String"/>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource63" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+                <Column Name="Qualificacao" DataType="null">
+                  <Column Name="Nome" DataType="System.String"/>
+                  <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                  <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <Column Name="TipoDeParticipacao" DataType="null">
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource64" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource65" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+                <Column Name="Endereco" DataType="null">
+                  <Column Name="ParticipanteID" DataType="System.Guid"/>
+                  <Column Name="Cep" DataType="System.Int32"/>
+                  <Column Name="Endereco" DataType="System.String"/>
+                  <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                  <Column Name="Complemento" DataType="System.String"/>
+                  <Column Name="Bairro" DataType="System.String"/>
+                  <Column Name="Cidade" DataType="System.String"/>
+                  <Column Name="Estado" DataType="System.String"/>
+                  <Column Name="Ordem" DataType="System.Int32"/>
+                  <Column Name="Participante" DataType="null">
+                    <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                    <Column Name="Data" DataType="System.DateTime"/>
+                    <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                    <Column Name="QualificacaoID" DataType="System.Guid"/>
+                    <Column Name="Nome" DataType="System.String"/>
+                    <Column Name="Emails" DataType="System.String"/>
+                    <Column Name="Telefones" DataType="System.String"/>
+                    <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <Column Name="Profissao" DataType="System.String"/>
+                    <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                    <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                    <Column Name="Nacionalidade" DataType="System.String"/>
+                    <Column Name="Pessoa" DataType="null">
+                      <Column Name="TipoDeDocumento" DataType="System.String"/>
+                      <Column Name="NumeroDoDocumento" DataType="System.Int64"/>
+                      <Column Name="NumeroDoDocumentoReduzido" DataType="System.Int32"/>
+                      <Column Name="Data" DataType="System.DateTime"/>
+                      <Column Name="SuspenderPesquisa" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource66" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="TipoDeParticipacao" DataType="null">
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource67" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="Qualificacao" DataType="null">
+                      <Column Name="Nome" DataType="System.String"/>
+                      <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                      <Column Name="UsoInterno" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <Column Name="TipoDeParticipacao" DataType="null">
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource68" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="Endereco" DataType="null">
+                      <Column Name="ParticipanteID" DataType="System.Guid"/>
+                      <Column Name="Cep" DataType="System.Int32"/>
+                      <Column Name="Endereco" DataType="System.String"/>
+                      <Column Name="NumeroDoEndereco" DataType="System.String"/>
+                      <Column Name="Complemento" DataType="System.String"/>
+                      <Column Name="Bairro" DataType="System.String"/>
+                      <Column Name="Cidade" DataType="System.String"/>
+                      <Column Name="Estado" DataType="System.String"/>
+                      <Column Name="Ordem" DataType="System.Int32"/>
+                      <Column Name="Participante" DataType="null">
+                        <Column Name="PessoaID" DataType="System.Nullable`1[[System.Guid, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]"/>
+                        <Column Name="Data" DataType="System.DateTime"/>
+                        <Column Name="TipoDeParticipacaoID" DataType="System.Guid"/>
+                        <Column Name="QualificacaoID" DataType="System.Guid"/>
+                        <Column Name="Nome" DataType="System.String"/>
+                        <Column Name="Emails" DataType="System.String"/>
+                        <Column Name="Telefones" DataType="System.String"/>
+                        <Column Name="Ativo" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <Column Name="Profissao" DataType="System.String"/>
+                        <Column Name="TipoDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="NumeroDoSegundoDocumento" DataType="System.String"/>
+                        <Column Name="Nacionalidade" DataType="System.String"/>
+                        <Column Name="Pessoa" Enabled="false" DataType="null"/>
+                        <Column Name="TipoDeParticipacao" Enabled="false" DataType="null"/>
+                        <Column Name="Qualificacao" Enabled="false" DataType="null"/>
+                        <Column Name="Endereco" Enabled="false" DataType="null"/>
+                        <Column Name="ID" DataType="System.Guid"/>
+                        <Column Name="ValidationResult" Enabled="false" DataType="null"/>
+                      </Column>
+                      <Column Name="ID" DataType="System.Guid"/>
+                      <Column Name="ValidationResult" DataType="null">
+                        <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                        <BusinessObjectDataSource Name="BusinessObjectDataSource69" Alias="Erros" Enabled="false" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros"/>
+                        <Column Name="MessageSuccess" DataType="System.String"/>
+                      </Column>
+                    </Column>
+                    <Column Name="ID" DataType="System.Guid"/>
+                    <Column Name="ValidationResult" DataType="null">
+                      <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                      <BusinessObjectDataSource Name="BusinessObjectDataSource70" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                        <Column Name="Length" DataType="System.Int32"/>
+                      </BusinessObjectDataSource>
+                      <Column Name="MessageSuccess" DataType="System.String"/>
+                    </Column>
+                  </Column>
+                  <Column Name="ID" DataType="System.Guid"/>
+                  <Column Name="ValidationResult" DataType="null">
+                    <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                    <BusinessObjectDataSource Name="BusinessObjectDataSource71" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                      <Column Name="Length" DataType="System.Int32"/>
+                    </BusinessObjectDataSource>
+                    <Column Name="MessageSuccess" DataType="System.String"/>
+                  </Column>
+                </Column>
+                <Column Name="ID" DataType="System.Guid"/>
+                <Column Name="ValidationResult" DataType="null">
+                  <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                  <BusinessObjectDataSource Name="BusinessObjectDataSource72" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                    <Column Name="Length" DataType="System.Int32"/>
+                  </BusinessObjectDataSource>
+                  <Column Name="MessageSuccess" DataType="System.String"/>
+                </Column>
+              </Column>
+              <Column Name="ID" DataType="System.Guid"/>
+              <Column Name="ValidationResult" DataType="null">
+                <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+                <BusinessObjectDataSource Name="BusinessObjectDataSource73" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+                  <Column Name="Length" DataType="System.Int32"/>
+                </BusinessObjectDataSource>
+                <Column Name="MessageSuccess" DataType="System.String"/>
+              </Column>
+            </Column>
+          </Column>
+          <Column Name="ID" DataType="System.Guid"/>
+          <Column Name="ValidationResult" DataType="null">
+            <Column Name="IsOK" DataType="System.Boolean" BindableControl="CheckBox"/>
+            <BusinessObjectDataSource Name="BusinessObjectDataSource44" Alias="Erros" DataType="System.Collections.Generic.List`1[[System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]" PropName="Erros" Enabled="true">
+              <Column Name="Length" DataType="System.Int32"/>
+            </BusinessObjectDataSource>
+            <Column Name="MessageSuccess" DataType="System.String"/>
+          </Column>
+        </Column>
+        <Column Name="CodigoDeBarrasDaLogistica" DataType="System.String"/>
+      </BusinessObjectDataSource>
+    </BusinessObjectDataSource>
+  </Dictionary>
+
+  <ReportPage Name="Page1" RawPaperSize="9" TopMargin="8" BottomMargin="0">
+    <DataBand Name="Data1" Width="718.2" Height="800" CanGrow="true" DataSource="BusinessObjectDataSource1">
+
+      <!-- ===== GRUPO A: Detectável por regex estrutural ===== -->
+
+      <!-- A1: CNPJ fixo do cartório de origem -->
+      <TextObject Name="txtHardCNPJ"
+        Left="10" Top="10" Width="200" Height="18"
+        Text="CNPJ: 04.123.456/0001-78"/>
+
+      <!-- A2: Telefone fixo -->
+      <TextObject Name="txtHardTelefone"
+        Left="10" Top="30" Width="200" Height="18"
+        Text="Tel: (11) 3456-7890 / (11) 98765-4321"/>
+
+      <!-- A3: CEP fixo -->
+      <TextObject Name="txtHardCEP"
+        Left="10" Top="50" Width="200" Height="18"
+        Text="CEP: 01310-100"/>
+
+      <!-- A4: Data literal fixa -->
+      <TextObject Name="txtHardData"
+        Left="10" Top="70" Width="200" Height="18"
+        Text="São Paulo, 15/03/2024"/>
+
+      <!-- A5: Valor monetário fixo -->
+      <TextObject Name="txtHardValor"
+        Left="10" Top="90" Width="200" Height="18"
+        Text="Taxa de Implantação: R$ 127,84"/>
+
+      <!-- A6: Ordinal de cartório -->
+      <TextObject Name="txtHardNomeCartorio"
+        Left="10" Top="110" Width="300" Height="18"
+        Text="4º Tabelionato de Protestos de São Paulo"/>
+
+      <!-- A7: Agência bancária fixa -->
+      <TextObject Name="txtHardAgencia"
+        Left="10" Top="130" Width="300" Height="18"
+        Text="Banco do Brasil - Agência 1234-5 / CC 56789-0"/>
+
+      <!-- A8: CPF fixo (tabelião) -->
+      <TextObject Name="txtHardCPF"
+        Left="10" Top="150" Width="200" Height="18"
+        Text="CPF: 123.456.789-00"/>
+
+      <!-- ===== GRUPO B: NÃO detectável por regex (texto livre) ===== -->
+
+      <!-- B1: Nome do tabelião fixo -->
+      <TextObject Name="txtHardTabeliao"
+        Left="10" Top="170" Width="300" Height="18"
+        Text="Dr. João Carlos Silva — Tabelião Titular"/>
+
+      <!-- B2: Endereço sem CEP -->
+      <TextObject Name="txtHardEndereco"
+        Left="10" Top="190" Width="300" Height="18"
+        Text="Rua Boa Vista, 254 — Centro — São Paulo/SP"/>
+
+      <!-- B3: Complemento curto sem padrão -->
+      <TextObject Name="txtHardComplemento"
+        Left="10" Top="210" Width="200" Height="18"
+        Text="Sala 42 — 4º andar"/>
+
+      <!-- B4: Texto misto — label + valor fixo errado -->
+      <TextObject Name="txtHardMisto"
+        Left="10" Top="230" Width="400" Height="18"
+        Text="Cartório: 4º Tabelionato — Responsável: Dr. João Silva"/>
+
+      <!-- B5: Município fixo -->
+      <TextObject Name="txtHardMunicipio"
+        Left="10" Top="250" Width="150" Height="18"
+        Text="São Paulo"/>
+
+      <!-- ===== GRUPO C: PictureObjects ===== -->
+
+      <!-- C1: Logo embutido em base64 — NÃO vem do schema -->
+      <PictureObject Name="imgHardLogo"
+        Left="500" Top="10" Width="94.5" Height="47.25"
+        DataColumn=""
+        Image="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="/>
+
+      <!-- C2: Logo correto via DataColumn -->
+      <PictureObject Name="imgLogoCorreto"
+        Left="500" Top="70" Width="94.5" Height="47.25"
+        DataColumn="Dados.DadosDoCartorio.Logo"/>
+
+      <!-- ===== GRUPO D: Controles (NÃO devem ser flagados) ===== -->
+
+      <!-- D1: Expressão correta — campo do schema -->
+      <TextObject Name="txtCorretoNome"
+        Left="10" Top="300" Width="300" Height="18"
+        Text="[Dados.DadosDoCartorio.Nome]"/>
+
+      <!-- D2: Label puro -->
+      <TextObject Name="txtLabelProtocolo"
+        Left="10" Top="320" Width="100" Height="18"
+        Text="Protocolo:"/>
+
+      <!-- D3: Texto misto correto — label + expressão -->
+      <TextObject Name="txtMistoCorreto"
+        Left="10" Top="340" Width="300" Height="18"
+        Text="Cartório: [Dados.DadosDoCartorio.Nome]"/>
+
+      <!-- D4: Texto legal institucional — zona cinza -->
+      <TextObject Name="txtLegal"
+        Left="10" Top="360" Width="500" Height="18"
+        Text="Certifico e dou fé que o presente instrumento é cópia fiel do original."/>
+
+      <!-- D5: Ordinal em contexto de label — não é hardcoded de cartório -->
+      <TextObject Name="txtLabelOrdinal"
+        Left="10" Top="380" Width="100" Height="18"
+        Text="1º Via"/>
+
+    </DataBand>
+  </ReportPage>
+</Report>

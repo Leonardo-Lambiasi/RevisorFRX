@@ -44,56 +44,82 @@ Todas as regras podem ser ativadas/desativadas individualmente pelo botão **⚙
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│  RevisorFRX                                          [🔍][⚙][?] │
+│  RevisorFRX                                        [🔍][⚙][?]   │
 │  Análise estática de relatórios FastReport (.frx)                │
 │                                                                  │
-│  [Selecionar arquivo .frx]  NomeDoArquivo.frx  [Selecionar pasta] [Analisar] │
+│  [Selecionar arquivo .frx]  NomeDoArquivo.frx                    │
+│  [Selecionar pasta]  [Analisar]  [✕ Cancelar]                    │
 │  ──────────────────────────────────────────────────────────────  │
-│  [ 3 Erros ] [ 2 Avisos ] [ 0 Info ]                            │
+│  📁 C:\Relatorios\  (15 arquivos .frx)                           │
+│  ● Boleto.frx                                                    │
+│  ● Certidão.frx                                                  │
+│  ● Intimação.frx  ...                                            │
+│  ──────────────────────────────────────────────────────────────  │
+│  [████████████░░░░]  Analisando arquivo 3 de 15 — Boleto.frx     │
+│  ──────────────────────────────────────────────────────────────  │
+│  [ 3 Erros ] [ 2 Avisos ] [ 0 Info ]                             │
 │                                                                  │
-│  Regra   │ Severidade │ Arquivo │ Componente │ Mensagem │ Detalhe │
-│  ────────┼────────────┼─────────┼────────────┼──────────┼─────── │
-│  Ref-10  │ Warning    │ rel.frx │ Text364    │ Colch... │ ...    │
-│  Ref-1   │ Error      │ rel.frx │ SubReport1 │ Master.. │ ...    │
-│  ...                                                             │
+│  Regra  │ Severidade │ Arquivo │ Componente │ Mensagem │ Detalhe  │
+│  ───────┼────────────┼─────────┼────────────┼──────────┼───────  │
+│  Ref-10 │ Warning    │ rel.frx │ Text364    │ Colch... │ ...     │
+│  Ref-1  │ Error      │ rel.frx │ SubReport1 │ Master.. │ ...     │
 │                                                                  │
 │  [Exportar relatório CSV]                                        │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-- Linhas vermelhas → `Error` | Linhas amarelas → `Warning` | Linhas azuis → `Info`
-- Exportação gera `.csv` compatível com Excel: `RevisorFRX_NomeArquivo_yyyyMMdd_HHmmss.csv`
-- Botão `[?]` abre guia de regras e glossário de termos FastReport
-- Botão `[⚙]` abre tela de configuração para ativar/desativar regras individualmente
-- Botão `[🔍]` abre o **Explorador de Schema** (habilitado ao selecionar um arquivo)
+- `[🔍]` abre o Explorador de Schema (habilitado apenas no modo arquivo único)
+- `[⚙]` abre configuração de regras
+- `[?]` abre a ajuda interativa com tutorial, passo a passo e glossário
+- `[✕ Cancelar]` interrompe análise em andamento (visível apenas durante análise)
+- Ao selecionar pasta: lista os `.frx` encontrados antes de analisar
+- ProgressBar com nome do arquivo atual durante análise de pasta
+- Resultados aparecem incrementalmente por arquivo (não só ao final)
 
 ### Explorador de Schema
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ Explorador de Schema — NomeArquivo.frx                       │
-│                                                              │
-│ 🔍 [________] Tipo:[▼todos] Entidade:[▼todas] Status:[▼Disp]│
-│ □ Apenas ⚠ null  □ Apenas campos usados  [⚙ Avançado ▼]    │
-│ ⚠ Schema grande (26.445 campos). Use os filtros acima.      │
-│ ────────────────────────────────────────────────────────────│
-│ Entidade│Campo│Tipo│Caminho completo│Usado em│Status         │
-│ ────────────────────────────────────────────────────────────│
-│ 18 campo(s) de 3.754 extraídos (26.445 no schema completo)  │
-│            [📥 Exportar CSV] [📋 Copiar caminho]  [Fechar]  │
-└──────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│  Explorador de Schema — NomeArquivo.frx                                │
+│                                                                        │
+│  🔍 [______________]  Tipo: [▼ todos ]  Entidade: [▼ todas ]          │
+│  Status: [▼ Disponível ]  □ Apenas ⚠ null    □ Apenas campos usados   │
+│  ⚠ Schema grande (26.445 campos). Use os filtros acima.               │
+│  [⚙ Avançado ▼]                                                        │
+│  ┌─ Filtros avançados ──────────────────────────────────────────────┐  │
+│  │  Profundidade máxima: [5 ▲▼]                                     │  │
+│  │  Segmentos excluídos: [ValidationResult]                         │  │
+│  │                            [Reaplicar]  [Restaurar padrões]      │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│  ──────────────────────────────────────────────────────────────────    │
+│  Entidade │ Campo │ Tipo │ Caminho completo │ Usado em │ Status        │
+│  ─────────────────────────────────────────────────────────────────     │
+│  18 campo(s) exibido(s) de 3.754 extraídos (26.445 no schema completo)│
+│                         [📥 Exportar CSV] [📋 Copiar caminho] [Fechar] │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-- Pesquisa em tempo real com debounce 150ms
-- Filtro por tipo, entidade e status (Em uso / Disponível)
-- Status ⚪ Disponível: campo mapeado no código mas não usado no layout — acione o time de projetos se precisar
-- Status ✅ Em uso: campo referenciado em algum TextObject
-- Coluna "Usado em": nome (1 uso), "N componentes" (2+) com tooltip da lista completa
-- Duplo-clique, Enter ou [📋 Copiar caminho] copia [Dados.Entidade.Campo] para o clipboard
-- [📥 Exportar CSV] exporta campos filtrados (UTF-8 BOM, ;)
-- Painel [⚙ Avançado]: profundidade máxima e segmentos excluídos configuráveis; "Reaplicar" reextrai sem bloquear UI
-- Filtro padrão: MaxDepth=5, exclui ValidationResult — reduz ~82% dos campos sem perder campos de negócio
-- Banner de aviso automático para schemas > 5.000 campos
+- Pesquisa em tempo real por entidade, campo ou caminho completo (debounce 150ms)
+- Filtro por tipo, entidade e status (`Em uso` / `Disponível`)
+- **Status `⚪ Disponível`**: campo mapeado no código mas não usado no layout — acione o time de projetos se precisar
+- **Status `✅ Em uso`**: campo já referenciado em algum TextObject do relatório
+- Coluna "Usado em": nome do componente (1 uso), "N componentes" (2+) com tooltip da lista completa, ou "—"
+- Duplo-clique, Enter ou `[📋 Copiar caminho]` copia `[Dados.Entidade.Campo]` para o clipboard
+- `[📥 Exportar CSV]` exporta os campos **atualmente filtrados** (UTF-8 BOM, separador `;`)
+- **Filtro padrão**: profundidade máxima 5, exclui segmento `ValidationResult` — reduz ~82% dos campos sem perder campos de negócio (validado com arquivos reais de até 26.445 campos)
+- Painel `[⚙ Avançado]`: ajuste de profundidade e segmentos excluídos; "Reaplicar" reextrai sem bloquear a UI
+- Banner de aviso automático para schemas com mais de 5.000 campos
+- Filtro Status abre em `Disponível` por padrão — evita congelar a UI na abertura de schemas grandes
+- Contador no rodapé exibe `N em uso • M null (obj)` quando nenhum filtro de status está ativo
+
+### Tela de Ajuda ([?])
+
+A tela de ajuda contém documentação interativa com 4 abas:
+
+- **Visão Geral** — o que o sistema faz, quando usar, o que não faz e tipos de resultado
+- **Passo a Passo** — fluxo de uso numerado, colunas do grid, botões e as 12 verificações
+- **Busca de Dados** — como usar o Explorador de Schema, status dos campos e filtros avançados explicados sem jargão técnico
+- **Glossário** — 15 termos do FastReport explicados em linguagem simples
 
 ---
 
@@ -168,11 +194,12 @@ RevisorFRX/
 │   │   └── Ref12Rule.cs          # CanGrow inconsistente banda vs TextObject
 │   └── Services/
 │       ├── FrxAnalyzer.cs        # Orquestra as regras e ordena por severidade
-│       └── SchemaExtractor.cs    # Extrai campos do Dictionary como List<SchemaField>
+│       ├── SchemaExtractor.cs    # Extrai campos do Dictionary como List<SchemaField>
+│       └── SchemaExtractorOptions.cs   # Configuração de filtro do SchemaExtractor
 └── RevisorFRX.App/               # WinForms — apenas UI
     ├── MainForm.cs               # Janela principal
     ├── ConfigForm.cs             # Tela de ativação/desativação de regras
-    ├── HelpForm.cs               # Guia de regras e glossário
+    ├── HelpForm.cs               # Ajuda interativa com 4 abas (tutorial + glossário)
     ├── SchemaExplorerForm.cs     # Explorador de Schema com filtros e cópia de caminho
     └── Program.cs
 ```
@@ -285,6 +312,7 @@ dotnet run -- -f "ArquivoFRXTeste/teste_completo_todas_regras.frx"
 | 21 | SchemaExtractor.cs | EnrichWithUsage usava OrdinalIgnoreCase — divergência com Expr1Rule; corrigido para Ordinal |
 | 22 | MainForm.cs | CSV exportado sem BOM UTF-8 — acentos errados no Excel pt-BR |
 | 23 | MainForm.cs | ReordenarGridPorSeveridade reutilizava DataGridViewRow após Clear() — reconstruído a partir de _results |
+| 24 | `MainForm.cs` | Botão "Exportar CSV" visível mesmo com 0 resultados — ocultado quando `_results.Count == 0` |
 
 ---
 
@@ -296,8 +324,9 @@ dotnet run -- -f "ArquivoFRXTeste/teste_completo_todas_regras.frx"
 - `Format-1` não analisa TextObjects cujo Text contenha chamadas de função (parênteses) para evitar falsos positivos.
 - `Format-7` verifica `Barcode.CalcCheckSum` — se o atributo não existe no XML, a regra não dispara (assinatura do FastReport para tipos como QR Code não utilizam este atributo).
 - `Ref-3` removido — taxa de falso positivo >70% nos modelos reais (eventos legados/tratados externamente). O código (`Ref3Rule.cs`) permanece no repositório como referência, mas não é registrado.
-- O Explorador de Schema usa filtro por profundidade (padrão MaxDepth=5) e exclui segmentos de infraestrutura (ValidationResult). Campos em profundidade > 5 não aparecem por padrão — ajuste em ⚙ Avançado se necessário.
-- O modo batch processa arquivos sequencialmente para evitar acúmulo de XDocument grandes em memória.
+- O **Explorador de Schema** aplica filtro de profundidade (padrão `MaxDepth=5`) e exclui segmentos de infraestrutura (`ValidationResult`). Campos em profundidade > 5 não aparecem por padrão — ajuste em `[⚙ Avançado]` se necessário. Validado com arquivos reais: campos escalares legítimos (ValorTotal, Data, CEP) aparecem em profundidade 5; profundidade 6+ são artefatos do EF Core.
+- O modo batch (pasta) processa arquivos **sequencialmente** — sem paralelismo intencional, para evitar acúmulo de `XDocument` grandes em memória simultaneamente.
+- A ordenação por clique no header de coluna no Explorador de Schema não está implementada para o modo de filtro ativo.
 
 ---
 

@@ -6,9 +6,10 @@ public class HelpForm : Form
     {
         SuspendLayout();
 
-        Text = "RevisorFRX — Guia de Regras e Termos";
-        ClientSize = new Size(686, 562);
-        FormBorderStyle = FormBorderStyle.FixedSingle;
+        Text = "RevisorFRX — Guia de uso";
+        ClientSize = new Size(700, 560);
+        MinimumSize = new Size(600, 480);
+        FormBorderStyle = FormBorderStyle.Sizable;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterParent;
         Font = new Font("Segoe UI", 9F);
@@ -17,24 +18,53 @@ public class HelpForm : Form
         var tabControl = new TabControl
         {
             Location = new Point(8, 8),
-            Size = new Size(670, 512),
-            Font = new Font("Segoe UI", 9F)
+            Size = new Size(684, 506),
+            Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+            Font = new Font("Segoe UI", 9.5F),
+            BackColor = Color.FromArgb(248, 249, 250),
         };
 
-        var tabRegras = new TabPage { Text = "Regras", BackColor = Color.White };
-        var tabGlossario = new TabPage { Text = "Glossário", BackColor = Color.White };
+        var tabGeral  = CriarAba("  Visão Geral  ");
+        var tabPassos = CriarAba("  Passo a Passo  ");
+        var tabSchema = CriarAba("  Busca de Dados 🔍  ");
+        var tabGloss  = CriarAba("  Glossário  ");
 
-        tabRegras.Controls.Add(CreateRichTextBox(GetRegrasContent()));
-        tabGlossario.Controls.Add(CreateRichTextBox(GetGlossarioContent()));
+        var rtbGeral  = CriarRtb();
+        var rtbPassos = CriarRtb();
+        var rtbSchema = CriarRtb();
+        var rtbGloss  = CriarRtb();
 
-        tabControl.TabPages.Add(tabRegras);
-        tabControl.TabPages.Add(tabGlossario);
+        tabGeral.Controls.Add(rtbGeral);
+        tabPassos.Controls.Add(rtbPassos);
+        tabSchema.Controls.Add(rtbSchema);
+        tabGloss.Controls.Add(rtbGloss);
+
+        PreencherGeral(rtbGeral);
+        PreencherPassos(rtbPassos);
+        PreencherSchema(rtbSchema);
+        PreencherGlossario(rtbGloss);
+
+        // Congela edição depois de popular
+        rtbGeral.ReadOnly  = true;
+        rtbPassos.ReadOnly = true;
+        rtbSchema.ReadOnly = true;
+        rtbGloss.ReadOnly  = true;
+
+        // Scroll para o topo em cada aba
+        foreach (var rtb in new[] { rtbGeral, rtbPassos, rtbSchema, rtbGloss })
+        {
+            rtb.SelectionStart = 0;
+            rtb.ScrollToCaret();
+        }
+
+        tabControl.TabPages.AddRange(new[] { tabGeral, tabPassos, tabSchema, tabGloss });
 
         var btnFechar = new Button
         {
             Text = "Fechar",
-            Location = new Point(303, 530),
-            Size = new Size(80, 28),
+            Location = new Point(612, 522),
+            Size = new Size(80, 30),
+            Anchor = AnchorStyles.Bottom | AnchorStyles.Right,
             FlatStyle = FlatStyle.Flat,
             BackColor = Color.FromArgb(108, 117, 125),
             ForeColor = Color.White,
@@ -50,257 +80,388 @@ public class HelpForm : Form
         ResumeLayout(false);
     }
 
-    private static RichTextBox CreateRichTextBox(string content) =>
-        new RichTextBox
-        {
-            Text = content,
-            ReadOnly = true,
-            BorderStyle = BorderStyle.None,
-            Font = new Font("Segoe UI", 9F),
-            ScrollBars = RichTextBoxScrollBars.Vertical,
-            Dock = DockStyle.Fill,
-            BackColor = Color.White
-        };
+    // ── Construtores de controles ─────────────────────────────
 
-    private static string GetRegrasContent() =>
-"""
-REGRAS DE ANÁLISE
-═════════════════════════════════════════════════════════════
+    private static TabPage CriarAba(string title) => new TabPage
+    {
+        Text = title,
+        BackColor = Color.FromArgb(248, 249, 250),
+        Padding = new Padding(0),
+    };
 
-🔴 ERROS — impedem o relatório de funcionar corretamente
-═════════════════════════════════════════════════════════════
+    private static RichTextBox CriarRtb() => new RichTextBox
+    {
+        ReadOnly = false,
+        BackColor = Color.FromArgb(248, 249, 250),
+        ForeColor = Color.FromArgb(33, 37, 41),
+        BorderStyle = BorderStyle.None,
+        Font = new Font("Segoe UI", 10F),
+        ScrollBars = RichTextBoxScrollBars.Vertical,
+        Dock = DockStyle.Fill,
+        DetectUrls = false,
+    };
 
-🔴 Ref-2 — DataSource não declarado                           [ERRO]
-──────────────────────────────────────────────────────────────
-O que é:
-  Cada DataBand precisa referenciar uma fonte de dados declarada
-  no Dictionary. Se o DataSource não existe, a banda não itera.
+    // ── Paleta de cores ───────────────────────────────────────
 
-Por que é perigoso:
-  A banda renderiza vazia ou lança NullReferenceException.
+    private static readonly Color ClrTitulo   = Color.FromArgb(13, 110, 253);
+    private static readonly Color ClrSub      = Color.FromArgb(13, 110, 253);
+    private static readonly Color ClrTexto    = Color.FromArgb(33, 37, 41);
+    private static readonly Color ClrDimmed   = Color.FromArgb(108, 117, 125);
+    private static readonly Color ClrErro     = Color.FromArgb(180, 35, 35);
+    private static readonly Color ClrAviso    = Color.FromArgb(160, 100, 0);
+    private static readonly Color ClrOk       = Color.FromArgb(25, 135, 84);
+    private static readonly Color ClrDestaque = Color.FromArgb(13, 110, 253);
+    private static readonly Color ClrSep      = Color.FromArgb(222, 226, 230);
 
-Como corrigir:
-  Garantir que existe um BusinessObjectDataSource com o mesmo nome
-  no Dictionary.
+    // ── Helpers de formatação ─────────────────────────────────
 
-──────────────────────────────────────────────────────────────
+    private static void Sel(RichTextBox rtb, Font font, Color cor)
+    {
+        rtb.SelectionStart  = rtb.TextLength;
+        rtb.SelectionLength = 0;
+        rtb.SelectionFont   = font;
+        rtb.SelectionColor  = cor;
+    }
 
-🔴 Ref-1 — MasterComponent inválido                           [ERRO]
-──────────────────────────────────────────────────────────────
-O que é:
-  DataBand filha aponta para uma banda mestre via MasterComponent.
-  Se o nome não existe, a banda filha é ignorada.
+    private static void H1(RichTextBox rtb, string text)
+    {
+        Sel(rtb, new Font("Segoe UI", 13F, FontStyle.Bold), ClrTitulo);
+        rtb.AppendText(text + "\n\n");
+    }
 
-Como corrigir:
-  Corrigir MasterComponent para o Name exato da banda mestre.
+    private static void H2(RichTextBox rtb, string text)
+    {
+        Sel(rtb, new Font("Segoe UI", 10.5F, FontStyle.Bold), ClrSub);
+        rtb.AppendText(text + "\n");
+    }
 
-──────────────────────────────────────────────────────────────
+    private static void Body(RichTextBox rtb, string text)
+    {
+        Sel(rtb, new Font("Segoe UI", 10F), ClrTexto);
+        rtb.AppendText(text + "\n");
+    }
 
-🔴 Code-2 — Cast direto em Row[] ou .Value sem HasValue       [ERRO]
-──────────────────────────────────────────────────────────────
-O que é:
-  Acessar Row["Campo"] retorna object. Cast direto como
-  (Boolean)Row["Campo"] lança InvalidCastException se DBNull.
-  Acessar .Value em Nullable sem HasValue lança
-  InvalidOperationException — trava o relatório.
+    private static void Dim(RichTextBox rtb, string text)
+    {
+        Sel(rtb, new Font("Segoe UI", 9.5F, FontStyle.Italic), ClrDimmed);
+        rtb.AppendText(text + "\n");
+    }
 
-Detecta QUALQUER value type (int, decimal, struct personalizado,
-  etc.), não só os tipos conhecidos.
+    private static void Blank(RichTextBox rtb, int lines = 1)
+    {
+        Sel(rtb, new Font("Segoe UI", 10F), ClrTexto);
+        rtb.AppendText(new string('\n', lines));
+    }
 
-Exemplos que TRAVAM o relatório:
-  bool ativo = (Boolean)Row["Ativo"];
-  var data = ((DateTime?)Row["Data"]).Value;  // sem HasValue!
+    private static void Sep(RichTextBox rtb)
+    {
+        Sel(rtb, new Font("Segoe UI", 7F), ClrSep);
+        rtb.AppendText("  " + new string('─', 78) + "\n\n");
+    }
 
-Como corrigir:
-  Usar Convert ou verificação de nulo:
-  bool ativo = Convert.ToBoolean(Row["Ativo"] ?? false);
+    // Linha com ícone colorido + texto
+    private static void Bullet(RichTextBox rtb, string icon, Color iconColor, string text)
+    {
+        Sel(rtb, new Font("Segoe UI", 10F, FontStyle.Bold), iconColor);
+        rtb.AppendText("  " + icon + " ");
+        Sel(rtb, new Font("Segoe UI", 10F), ClrTexto);
+        rtb.AppendText(text + "\n");
+    }
 
-──────────────────────────────────────────────────────────────
+    // Rótulo em negrito seguido de corpo em tom normal
+    private static void BulletNegrito(RichTextBox rtb, string rotulo, string corpo)
+    {
+        Sel(rtb, new Font("Segoe UI", 10F, FontStyle.Bold), ClrTexto);
+        rtb.AppendText("  " + rotulo);
+        Sel(rtb, new Font("Segoe UI", 10F), ClrDimmed);
+        rtb.AppendText(" " + corpo + "\n");
+    }
 
-🔴 Code-3 — Métodos obrigatórios ausentes no ScriptText      [ERRO]
-──────────────────────────────────────────────────────────────
-O que é:
-  O relatório deve conter os métodos utilitários do template padrão:
-  • AplicarMascaraDeDocumento
-  • ExtrairCaracteresNumericos
-  • AplicarMascaraDeCNPJ
-  • AplicarMascaraDeCPF
+    // Passo numerado: título em destaque, corpo indentado
+    private static void Passo(RichTextBox rtb, int n, string titulo, string corpo)
+    {
+        Sel(rtb, new Font("Segoe UI", 10.5F, FontStyle.Bold), ClrSub);
+        rtb.AppendText($"\n  {n}.  {titulo}\n");
+        Sel(rtb, new Font("Segoe UI", 10F), ClrTexto);
+        rtb.AppendText("      " + corpo + "\n");
+    }
 
-Se ausentes, o relatório foi criado fora do template padrão.
+    // Chip colorido (ex: 🔴 ERRO) + descrição
+    private static void Chip(RichTextBox rtb, string rotulo, Color cor, string descricao)
+    {
+        Sel(rtb, new Font("Segoe UI", 10.5F, FontStyle.Bold), cor);
+        rtb.AppendText("  " + rotulo + "\n");
+        Sel(rtb, new Font("Segoe UI", 10F), ClrTexto);
+        rtb.AppendText("  " + descricao + "\n\n");
+    }
 
-🟡 AVISOS — comportamento inesperado em runtime
-═════════════════════════════════════════════════════════════
+    // Termo do glossário: nome em destaque, definição indentada
+    private static void Termo(RichTextBox rtb, string nome, string def)
+    {
+        Sel(rtb, new Font("Segoe UI", 10F, FontStyle.Bold), ClrSub);
+        rtb.AppendText("  " + nome + "\n");
+        Sel(rtb, new Font("Segoe UI", 10F), ClrTexto);
+        rtb.AppendText("      " + def + "\n\n");
+    }
 
-🟡 Format-1 — Formatação incorreta ou ausente                [AVISO]
-──────────────────────────────────────────────────────────────
-Decimal sem Format="Currency" ou DateTime sem Format="Date".
-O valor aparece no formato do SO, que pode variar por máquina.
+    // ── Conteúdo das abas ─────────────────────────────────────
 
-Correção:
-  Decimal:  Format="Currency" Format.DecimalDigits="2"
-  DateTime: Format="Date"
+    private static void PreencherGeral(RichTextBox rtb)
+    {
+        Blank(rtb);
+        H1(rtb, "  O que é o RevisorFRX");
 
-──────────────────────────────────────────────────────────────
+        Body(rtb, "  O RevisorFRX analisa arquivos de relatório (.frx) do FastReport em busca de");
+        Body(rtb, "  problemas que podem fazer o relatório falhar ou exibir dados incorretos.");
+        Body(rtb, "  Você não precisa abrir o FastReport Designer — basta selecionar o arquivo");
+        Body(rtb, "  e clicar em Analisar.");
 
-🟡 Expr-1 — Campo ausente no schema                          [AVISO]
-──────────────────────────────────────────────────────────────
-TextObjects com [Dados.Entidade.Campo] onde o campo não existe
-no Dictionary.
+        Sep(rtb);
+        H2(rtb, "  Quando usar");
+        Blank(rtb);
+        Bullet(rtb, "•", ClrSub, "Antes de entregar um relatório novo para produção");
+        Bullet(rtb, "•", ClrSub, "Quando um relatório está gerando erro ou exibindo dados errados");
+        Bullet(rtb, "•", ClrSub, "Ao receber um .frx de outro time para validar");
+        Bullet(rtb, "•", ClrSub, "Como verificação de rotina após alterações no modelo de dados");
 
-──────────────────────────────────────────────────────────────
+        Sep(rtb);
+        H2(rtb, "  O que ele NÃO faz");
+        Blank(rtb);
+        Bullet(rtb, "•", ClrDimmed, "Não abre nem modifica o arquivo .frx");
+        Bullet(rtb, "•", ClrDimmed, "Não se conecta ao banco de dados ou ao sistema");
+        Bullet(rtb, "•", ClrDimmed, "Não gera relatórios nem PDFs");
+        Bullet(rtb, "•", ClrDimmed, "Não detecta erros de conteúdo (ex: valores incorretos nos dados de origem)");
 
-🟡 Expr-2 — Campo não escalar em expressão                   [AVISO]
-──────────────────────────────────────────────────────────────
-Expressão [Dados.X] referencia um campo com DataType="null"
-(objeto não escalar). Deveria ser [Dados.X.Propriedade].
+        Sep(rtb);
+        H2(rtb, "  Os dois tipos de resultado");
+        Blank(rtb);
 
-──────────────────────────────────────────────────────────────
+        Chip(rtb, "🔴  ERRO",
+            ClrErro,
+            "Problema grave que impede o relatório de funcionar corretamente.\n" +
+            "  O relatório pode travar, gerar uma tela de erro ou renderizar em branco.\n" +
+            "  Corrija antes de publicar o relatório em produção.");
 
-🟡 Ref-10 — Colchetes desbalanceados no Text                 [AVISO]
-──────────────────────────────────────────────────────────────
-Número de [ diferente de ] no atributo Text do TextObject.
-A expressão não resolve e vira texto literal.
+        Chip(rtb, "🟡  AVISO",
+            ClrAviso,
+            "Comportamento inesperado que pode não causar falha imediata, mas produz\n" +
+            "  resultados incorretos em situações específicas.\n" +
+            "  Exemplo: valor monetário aparece como \"1234.56\" em vez de \"R$ 1.234,56\".");
+    }
 
-──────────────────────────────────────────────────────────────
+    private static void PreencherPassos(RichTextBox rtb)
+    {
+        Blank(rtb);
+        H1(rtb, "  Como usar o RevisorFRX");
 
-🟡 Format-6 — Tags HTML sem HtmlTags ativado                 [AVISO]
-──────────────────────────────────────────────────────────────
-TextObject contém <b>, <i> etc. mas TextRenderType não é
-"HtmlTags". As tags aparecem como texto literal.
+        Passo(rtb, 1, "Selecionar o arquivo ou pasta",
+            "Clique em \"Selecionar arquivo .frx\" para analisar um único relatório.\n" +
+            "      Ou clique em \"Selecionar pasta\" para analisar todos os .frx de uma pasta de\n" +
+            "      uma vez — útil para varreduras periódicas.");
 
-──────────────────────────────────────────────────────────────
+        Passo(rtb, 2, "Clicar em Analisar",
+            "A análise normalmente leva menos de 5 segundos por arquivo.\n" +
+            "      Durante a análise de pasta, a barra de progresso indica o andamento.\n" +
+            "      Para interromper, clique em \"✕ Cancelar\".");
 
-🟡 Code-4 — CNPJ alfanumérico                                 [AVISO]
-──────────────────────────────────────────────────────────────
-O CNPJ pode conter letras. Detecta validações no ScriptText
-(Length==14, \d{14}), máscaras ##.###.###/####-## e campos
-numéricos no Dictionary — todos precisam ser revisados.
+        Passo(rtb, 3, "Ler os resultados no grid",
+            "Linhas vermelhas = Erros  |  Linhas amarelas = Avisos.\n" +
+            "      Os resultados são ordenados por severidade (Erros primeiro).");
 
-──────────────────────────────────────────────────────────────
+        Passo(rtb, 4, "Corrigir os problemas",
+            "Abra o .frx no FastReport Designer. Use a coluna \"Componente\" para localizar\n" +
+            "      o elemento com problema, e \"Mensagem\" + \"Detalhe\" para entender o que corrigir.\n" +
+            "      Para dúvidas sobre o que cada regra significa, consulte a aba \"Visão Geral\".");
 
-🟡 Format-7 — Barcode sem Checksum=false                     [AVISO]
-──────────────────────────────────────────────────────────────
-BarcodeObject com Barcode.CalcCheckSum diferente de "false".
-Checksum habilitado pode gerar códigos de barras inválidos
-para leitura.
+        Passo(rtb, 5, "Exportar o relatório",
+            "Clique em \"Exportar relatório CSV\" para salvar os resultados como planilha Excel.\n" +
+            "      O CSV inclui todas as colunas do grid e pode ser compartilhado com o time.");
 
-──────────────────────────────────────────────────────────────
+        Sep(rtb);
+        H2(rtb, "  O que significa cada coluna do grid");
+        Blank(rtb);
+        BulletNegrito(rtb, "Regra",      "— código da verificação aplicada (ex: Ref-2, Format-1)");
+        BulletNegrito(rtb, "Severidade", "— Error (vermelho) ou Warning (amarelo)");
+        BulletNegrito(rtb, "Arquivo",    "— nome do .frx analisado (útil em análise de pasta)");
+        BulletNegrito(rtb, "Componente", "— nome do TextObject, DataBand ou método com o problema");
+        BulletNegrito(rtb, "Mensagem",   "— descrição clara do problema encontrado");
+        BulletNegrito(rtb, "Detalhe",    "— informação adicional para localizar o problema no Designer");
 
-🟡 Ref-12 — CanGrow inconsistente banda vs TextObject        [AVISO]
-──────────────────────────────────────────────────────────────
-TextObject com CanGrow=true mas a banda pai não. O texto
-cresce e sobrepõe componentes abaixo.
-""";
+        Sep(rtb);
+        H2(rtb, "  Botões da tela principal");
+        Blank(rtb);
+        BulletNegrito(rtb, "⚙",
+            "Configurações — ativa ou desativa regras individualmente");
+        BulletNegrito(rtb, "🔍",
+            "Explorador de Schema — lista todos os campos disponíveis no .frx (ver aba \"Busca de Dados\")");
+        BulletNegrito(rtb, "Exportar CSV",
+            "Salva todos os resultados do grid como planilha Excel");
+        BulletNegrito(rtb, "✕ Cancelar",
+            "Interrompe a análise em andamento (aparece apenas durante análise de pasta)");
 
-    private static string GetGlossarioContent() =>
-"""
-GLOSSÁRIO DE TERMOS
-═════════════════════════════════════════════════════════════
+        Sep(rtb);
+        H2(rtb, "  As 12 verificações realizadas");
+        Blank(rtb);
 
-.frx
-  Formato de arquivo do FastReport. É um XML que contém toda a
-  definição do relatório: layout, dados, script C# e configurações.
-  Pode ser aberto no FastReport Designer ou analisado como XML puro.
+        Sel(rtb, new Font("Segoe UI", 10F, FontStyle.Bold), ClrErro);
+        rtb.AppendText("  Erros — impedem o relatório de funcionar\n");
+        BulletNegrito(rtb, "  Ref-2",   "DataSource referencia uma fonte não declarada no Dictionary");
+        BulletNegrito(rtb, "  Ref-1",   "MasterComponent aponta para um componente que não existe");
+        BulletNegrito(rtb, "  Code-2",  "Cast sem verificação de nulo pode travar o relatório");
+        BulletNegrito(rtb, "  Code-3",  "Métodos utilitários obrigatórios ausentes no código embutido");
+        Blank(rtb);
 
-ScriptText
-  Bloco de código C# embutido dentro do arquivo .frx. Contém métodos
-  que são chamados pelos eventos dos componentes (BeforePrint, AfterData,
-  etc.). É compilado e executado pelo FastReport em runtime durante a
-  geração do PDF.
+        Sel(rtb, new Font("Segoe UI", 10F, FontStyle.Bold), ClrAviso);
+        rtb.AppendText("  Avisos — comportamento inesperado em runtime\n");
+        BulletNegrito(rtb, "  Format-1", "Decimal sem formato de moeda ou DateTime sem formato de data");
+        BulletNegrito(rtb, "  Format-6", "Tags HTML presentes mas o modo HtmlTags não está ativado");
+        BulletNegrito(rtb, "  Format-7", "Código de barras com checksum habilitado incorretamente");
+        BulletNegrito(rtb, "  Expr-1",   "Expressão referencia campo que não existe no schema");
+        BulletNegrito(rtb, "  Expr-2",   "Expressão usa um campo do tipo objeto, não um valor simples");
+        BulletNegrito(rtb, "  Ref-12",   "TextObject pode crescer verticalmente mas a banda pai não");
+        BulletNegrito(rtb, "  Code-4",   "CNPJ tratado como apenas dígitos — novo formato permite letras");
+        BulletNegrito(rtb, "  Ref-10",   "Colchetes desbalanceados em uma expressão de campo");
+        Blank(rtb);
+    }
 
-Dictionary
-  Seção do .frx que declara todas as fontes de dados disponíveis para
-  o relatório. É aqui que ficam os BusinessObjectDataSource com o schema
-  completo — todas as entidades e campos que o relatório pode acessar.
+    private static void PreencherSchema(RichTextBox rtb)
+    {
+        Blank(rtb);
+        H1(rtb, "  Explorador de Schema  (botão 🔍)");
 
-BusinessObjectDataSource
-  Fonte de dados baseada em um objeto C# (DTO, lista, entidade).
-  Representa uma tabela ou lista de dados no relatório. Podem ser
-  aninhados — um pode conter outros como filhos, formando uma hierarquia
-  que espelha o modelo de dados da aplicação.
+        H2(rtb, "  O que é");
+        Blank(rtb);
+        Body(rtb, "  Todo arquivo .frx contém uma lista interna de campos disponíveis —");
+        Body(rtb, "  como uma tabela que o FastReport pode consultar para preencher o relatório.");
+        Body(rtb, "  Essa lista inclui campos do cartório, títulos, devedores, endereços e mais.");
+        Blank(rtb);
+        Body(rtb, "  O Explorador de Schema (botão 🔍) mostra essa lista de forma navegável,");
+        Body(rtb, "  com busca e filtros. É útil quando você precisa saber o caminho exato de");
+        Body(rtb, "  um campo para usar em uma expressão do relatório.");
 
-TableDataSource / CsvDataSource / ViewDataSource / JsonDataSource
-  Outros tipos de fonte de dados que o FastReport suporta. TableDataSource
-  para DataTables, CsvDataSource para arquivos CSV, ViewDataSource para
-  views de banco, JsonDataSource para APIs REST. O RevisorFRX detecta
-  todos eles ao validar referências.
+        Sep(rtb);
+        H2(rtb, "  Como usar a busca");
+        Blank(rtb);
+        Bullet(rtb, "•", ClrSub,
+            "Digite parte do nome na caixa de busca:  \"valor\",  \"nome\",  \"CEP\"...");
+        Bullet(rtb, "•", ClrSub,
+            "Filtro \"Tipo\" — exibe apenas Decimal, DateTime, String, Int etc.");
+        Bullet(rtb, "•", ClrSub,
+            "Filtro \"Entidade\" — exibe apenas campos de um grupo (ex: só do Devedor)");
+        Bullet(rtb, "•", ClrSub,
+            "Filtro \"Status\" — \"Disponível\" (não usado no layout) ou \"Em uso\" (já referenciado)");
+        Blank(rtb);
+        Body(rtb, "  Duplo-clique em uma linha — ou selecione e pressione Enter — para copiar");
+        Body(rtb, "  o caminho completo do campo:");
+        Blank(rtb);
+        Sel(rtb, new Font("Segoe UI", 10.5F, FontStyle.Bold), ClrDestaque);
+        rtb.AppendText("      [Dados.Titulo.ValorTotal]\n\n");
+        Body(rtb, "  Esse caminho pode ser colado diretamente em um TextObject no FastReport Designer.");
 
-DataBand
-  Banda de dados — a faixa do relatório que se repete para cada registro
-  da fonte de dados. Se a fonte tem 100 registros, a DataBand renderiza
-  100 vezes, uma para cada linha.
+        Sep(rtb);
+        H2(rtb, "  Status dos campos");
+        Blank(rtb);
+        Chip(rtb, "✅  Em uso", ClrOk,
+            "O campo já aparece em algum TextObject do relatório. Tudo certo.");
+        Chip(rtb, "⚪  Disponível", ClrDimmed,
+            "O campo está mapeado no código, mas não está sendo exibido no layout.\n\n" +
+            "  Se precisar usar esse campo: copie o caminho e cole em um TextObject no Designer.\n\n" +
+            "  Se o campo que você procura não aparecer nem em \"Disponível\": provavelmente ele\n" +
+            "  não está mapeado no código — nesse caso, acione o time de projetos.");
 
-MasterComponent
-  Propriedade de uma DataBand filha que aponta para a DataBand pai.
-  Define a relação mestre-detalhe: para cada linha do mestre, a filha
-  renderiza seus registros correspondentes.
+        Sep(rtb);
+        H2(rtb, "  Por que a lista não mostra todos os campos?");
+        Blank(rtb);
+        Body(rtb, "  Um relatório típico pode ter entre 8.000 e 26.000 campos mapeados pelo sistema.");
+        Body(rtb, "  A maioria são objetos internos — metadados de auditoria, objetos de usuário,");
+        Body(rtb, "  validações do framework — que nunca aparecem em expressões de relatório.");
+        Blank(rtb);
+        Body(rtb, "  O filtro padrão (profundidade 5) exibe apenas os campos realmente utilizáveis");
+        Body(rtb, "  e esconde o ruído técnico. Resultado: de ~26.000 para ~3.700 campos visíveis —");
+        Body(rtb, "  muito mais navegável, sem perder nenhum campo de negócio.");
 
-CanGrow / CanShrink
-  Propriedades que permitem um componente crescer ou encolher
-  verticalmente para acomodar seu conteúdo. Se um TextObject tem
-  CanGrow=true mas a DataBand pai não, o texto extravasa e sobrepõe
-  componentes abaixo. O RevisorFRX flagra essa inconsistência (Ref-12).
+        Sep(rtb);
+        H2(rtb, "  Configurações avançadas  (botão ⚙ Avançado)");
+        Blank(rtb);
+        BulletNegrito(rtb, "  Campo não aparece na lista?",
+            "Aumente a Profundidade de 5 para 6 ou 7 e clique em \"Reaplicar\".");
+        BulletNegrito(rtb, "  \"ValidationResult\" excluído por padrão:",
+            "Mecanismo interno do sistema de dados, nunca aparece em expressões de relatório.");
+        BulletNegrito(rtb, "  \"Restaurar padrões\":",
+            "Volta para Profundidade = 5 e exclui ValidationResult. Configuração recomendada.");
+        Blank(rtb);
+        Dim(rtb, "  Dica: use o filtro \"Disponível\" para ver todos os campos mapeados no código que");
+        Dim(rtb, "  ainda não estão sendo exibidos no layout — útil para identificar lacunas.");
+        Blank(rtb);
+    }
 
-BeforePrint / AfterData
-  Eventos do ciclo de vida dos componentes FastReport.
-  BeforePrint: disparado antes de o componente ser renderizado.
-  AfterData: disparado após os dados serem vinculados ao componente.
-  Ambos chamam métodos pelo nome — o método deve existir no ScriptText.
+    private static void PreencherGlossario(RichTextBox rtb)
+    {
+        Blank(rtb);
+        H1(rtb, "  Glossário de Termos");
 
-Row["Campo"]
-  Forma de acessar campos da fonte de dados dentro do ScriptText.
-  Retorna object — sempre requer verificação de nulo ou conversão
-  segura antes do uso, pois campos anuláveis do banco retornam
-  DBNull.Value em vez de null.
+        Termo(rtb, ".frx",
+            "Arquivo de relatório do FastReport. É um XML que contém o layout completo,\n" +
+            "      os dados disponíveis, o código C# embutido e as configurações.");
 
-DBNull.Value
-  Valor especial do .NET que representa um campo nulo vindo do banco
-  de dados. É diferente de null — um cast direto em DBNull.Value
-  lança InvalidCastException. Sempre verificar antes do cast:
-  if (Row["Campo"] != DBNull.Value) { ... }
+        Termo(rtb, "Dictionary / Schema",
+            "Seção do .frx que declara todas as fontes de dados e seus campos. É aqui\n" +
+            "      que ficam as entidades e os campos que o relatório pode acessar.");
 
-TextRenderType
-  Atributo do TextObject que define como o texto é interpretado.
-  "HtmlTags" permite usar tags HTML (<b>, <i>, <font>) no texto do
-  relatório. Sem esse atributo, as tags aparecem como texto literal.
-  O RevisorFRX flagra essa omissão (Format-6).
+        Termo(rtb, "TextObject",
+            "Campo de texto dentro do relatório. Pode conter texto estático, uma expressão\n" +
+            "      [Dados.Entidade.Campo] ou uma combinação dos dois.");
 
-Barcode.CalcCheckSum
-  Atributo do BarcodeObject que ativa o cálculo de dígito verificador.
-  Deve ser false para a maioria dos tipos de código de barras, pois
-  o checksum embutido pode gerar códigos inválidos para leitura.
-  O RevisorFRX verifica este atributo (Format-7).
+        Termo(rtb, "DataBand",
+            "Faixa de dados que se repete para cada registro da fonte de dados. Se a fonte\n" +
+            "      tem 100 registros, a DataBand renderiza 100 vezes, uma por linha.");
 
-Roslyn
-  Compilador C# da Microsoft usado internamente pelo RevisorFRX para
-  analisar o ScriptText. Em vez de procurar padrões por texto (regex),
-  o Roslyn compila o código em memória e inspeciona a árvore sintática
-  (AST) — a mesma análise que o Visual Studio faz internamente.
+        Termo(rtb, "Expressão  [Dados.X.Y]",
+            "Forma de referenciar um campo do Dictionary dentro de um TextObject.\n" +
+            "      Exemplo: [Dados.Titulo.ValorTotal] exibe o valor total do título.");
 
-AST (Árvore de Sintaxe Abstrata)
-  Representação estruturada do código C# gerada pelo Roslyn. Permite
-  navegar pelo código como um grafo — encontrar métodos, blocos catch,
-  casts e expressões com precisão cirúrgica, sem depender de regex.
+        Termo(rtb, "DataSource",
+            "Fonte de dados que alimenta uma DataBand. Deve estar declarada no Dictionary\n" +
+            "      para que o FastReport saiba de onde buscar os registros.");
 
-Format / Format.Pattern
-  Atributos do TextObject que definem como o valor é apresentado
-  no PDF. Format define o tipo de formatação (Currency, Date, Number,
-  Boolean). Format.Pattern define o padrão específico para datas
-  (ex: "dd/MM/yyyy"). Sem esses atributos, o FastReport usa o formato
-  padrão do sistema operacional — que varia entre máquinas e pode
-  gerar relatórios com datas em inglês ou valores sem símbolo de moeda.
+        Termo(rtb, "MasterComponent",
+            "Vínculo entre uma DataBand filha e sua DataBand pai, definindo a relação\n" +
+            "      mestre-detalhe. Para cada linha do mestre, a filha renderiza seus registros.");
 
-Schema Explorer
-  Ferramenta visual do RevisorFRX (botão 🔍) que exibe todos os campos
-  declarados no Dictionary do arquivo .frx. Permite pesquisar por nome,
-  filtrar por tipo de dado e entidade, ver quais campos são objetos não
-  escalares (DataType=null) e quais são efetivamente usados no relatório.
-  Duplo-clique copia o caminho completo para o clipboard.
+        Termo(rtb, "CanGrow",
+            "Propriedade que permite um TextObject crescer verticalmente quando o conteúdo\n" +
+            "      for maior que o espaço definido. A DataBand pai também precisa ter\n" +
+            "      CanGrow=true — caso contrário, o texto extravasa e sobrepõe o próximo campo.");
 
-CNPJ Alfanumérico (IN 2117/2023)
-  A Receita Federal passou a permitir letras no CNPJ a partir de julho
-  de 2026. Validações que assumem apenas dígitos (\d{14}, Length==14)
-  e campos numéricos (Int64, Decimal) precisam ser revisados.
-  O RevisorFRX detecta esses padrões (Code-4).
-""";
+        Termo(rtb, "ScriptText",
+            "Bloco de código C# embutido no .frx. Contém métodos chamados pelos eventos\n" +
+            "      do relatório (BeforePrint, AfterData, etc.). É compilado e executado pelo\n" +
+            "      FastReport em tempo de execução, durante a geração do PDF.");
+
+        Termo(rtb, "Row[\"Campo\"]",
+            "Forma de acessar campos da fonte de dados dentro do ScriptText. Retorna\n" +
+            "      object — sempre requer verificação de nulo antes de usar, pois campos\n" +
+            "      anuláveis do banco retornam DBNull.Value em vez de null (Code-2).");
+
+        Termo(rtb, "HtmlTags",
+            "Modo de renderização de TextObject que interpreta tags HTML (<b>, <i>, <font>).\n" +
+            "      Sem esse modo ativado, as tags aparecem como texto literal no PDF (Format-6).");
+
+        Termo(rtb, "Barcode.CalcCheckSum",
+            "Atributo do BarcodeObject que ativa o cálculo de dígito verificador. Deve ser\n" +
+            "      \"false\" na maioria dos casos — o checksum embutido pode gerar códigos\n" +
+            "      inválidos para leitura em leitores ópticos (Format-7).");
+
+        Termo(rtb, "CNPJ Alfanumérico  (IN 2117/2023)",
+            "A Receita Federal passou a permitir letras no CNPJ a partir de julho de 2026.\n" +
+            "      Validações que assumem apenas dígitos (\\d{14}, Length==14) e campos numéricos\n" +
+            "      (Int64, Decimal) precisam ser revisados. O RevisorFRX detecta esses padrões (Code-4).");
+
+        Termo(rtb, "Severidade Error  (🔴)",
+            "Problema grave que impede o relatório de funcionar. Corrigir antes de publicar.");
+
+        Termo(rtb, "Severidade Warning  (🟡)",
+            "Comportamento inesperado em runtime. O relatório funciona mas pode exibir\n" +
+            "      dados de forma incorreta ou inesperada em determinadas situações.");
+    }
 }

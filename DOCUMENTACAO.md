@@ -30,6 +30,17 @@ SchemaExtractor.Extract(doc)
     recursão nos filhos de Column (sub-colunas aninhadas)
     enriquece com lista de TextObjects que referenciam cada campo
     usado por: SchemaExplorerForm (visualização interativa do Dictionary)
+
+SchemaExtractorOptions
+    → configuração de filtro para SchemaExtractor
+    MaxDepth: profundidade máxima de entidades extraídas (padrão: 5)
+    ExcludedSegments: segmentos de nome que causam exclusão (padrão: ["ValidationResult"])
+    Unrestricted: extrai absolutamente tudo (diagnóstico/testes)
+    Motivação: arquivos reais têm 8.000–26.000 campos mapeados pelo EF Core;
+               o filtro padrão reduz ~82% do ruído sem perder campos de negócio.
+               Validado com arquivos reais: campos em profundidade 5 são legítimos
+               (ValorTotal, Data, CEP em Intimação); profundidade 6+ são artefatos
+               (ImagemFoto, UsuarioQueFezOhCadastro, ValidationResult.*).
 ```
 
 `SchemaField` (modelo em `RevisorFRX.Core.Models`):
@@ -43,6 +54,29 @@ IsNonScalar       // DataType == "null"
 UsedInComponents  // nomes dos TextObjects que referenciam este campo
 IsUsed            // UsedInComponents.Count > 0
 ```
+
+---
+
+## Tela de Ajuda (HelpForm)
+
+Aberta pelo botão `[?]` na toolbar. Tema claro, consistente com MainForm e ConfigForm.
+
+Estrutura: `TabControl` com 4 abas, `RichTextBox` read-only em cada aba
+(Segoe UI 10pt, sem borda, fundo 248,249,250).
+
+| Aba | Conteúdo |
+|-----|----------|
+| Visão Geral | O que o sistema faz, quando usar, o que não faz, tipos de resultado |
+| Passo a Passo | Fluxo de uso numerado, colunas do grid, botões, 12 verificações |
+| Busca de Dados | Explorador de Schema explicado sem jargão, status dos campos, filtros avançados |
+| Glossário | 15 termos do FastReport em linguagem simples |
+
+Paleta de cores do conteúdo:
+- Títulos: azul `(13, 110, 253)`
+- Texto corrido: quase preto `(33, 37, 41)`
+- Severidade Error: vermelho escuro `(180, 35, 35)`
+- Severidade Warning: âmbar escuro `(160, 100, 0)`
+- Dimmed/secundário: cinza médio `(108, 117, 125)`
 
 ---
 
@@ -70,6 +104,15 @@ MainForm.PopulateGrid()   ← volta para o thread de UI após await
 MainForm.UpdateBadges()
 ```
 
+```
+Proteção contra double-click:
+  _analisandoArquivo = true antes do primeiro await
+  AnalyzeButton_Click verifica _analisandoArquivo no início:
+    → se true: chama _cts?.Cancel() e retorna sem reiniciar
+  _cts anterior é cancelado e descartado antes de criar novo
+  _analisandoArquivo = false no finally de FinalizarModoAnalise()
+```
+
 ### Explorador de Schema
 
 ```
@@ -77,22 +120,81 @@ Usuário clica "🔍" (habilitado apenas com arquivo único selecionado)
        │
        ▼
 MainForm.BtnSchema_Click
-       │  File.ReadAllText(path)
-       │  XDocument.Parse(xml)
+       │  XDocument.Load(path)  ← dentro de Task.Run (não trava UI)
        ▼
-SchemaExtractor.Extract(doc)
+SchemaExtractor.Extract(doc, SchemaExtractorOptions.Default)
        │  navega <Dictionary> (Alias-first, recursivo)
+       │  aplica filtro: MaxDepth=5, ExcludedSegments=["ValidationResult"]
        │  extrai List<SchemaField> com EntityAlias + FieldName + DataType
-       │  enriquece UsedInComponents via TextObject.Text
+       │  enriquece UsedInComponents via TextObject.Text (case-sensitive)
        ▼
-List<SchemaField>
+List<SchemaField>  (~3.000–4.000 campos após filtro vs 8.000–26.000 sem filtro)
        │
        ▼
-SchemaExplorerForm(fields, fileName).ShowDialog()
-        │  filtros em tempo real (texto, tipo, entidade, null-only, used-only)
-        │  colorização por DataType
-        │  duplo-clique / botão copia FullPath para clipboard
-        │  exporta CSV (UTF-8 BOM, 6 colunas: Entidade;Campo;Tipo;É Objeto?;Caminho completo;Usado em)
+SchemaExplorerForm(fields, fileName, frxPath).ShowDialog()
+        │  Virtual Mode no DataGridView (renderiza só linhas visíveis)
+        │  filtro assíncrono com Task.Run + CancellationToken
+        │  debounce 150ms no campo de busca
+        │  filtros: texto livre, tipo, entidade, status, null-only, used-only
+        │  Status: "✅ Em uso" / "⚪ Disponível"
+        │  coluna "Usado em": nome (1), "N componentes" (2+) com tooltip
+        │  duplo-clique / Enter / botão copia FullPath para clipboard
+        │  exporta CSV (UTF-8 BOM, separador ";", campos filtrados)
+        │  painel "⚙ Avançado": MaxDepth e ExcludedSegments configuráveis
+        │    → "Reaplicar": async, reextrai sem bloquear UI
+        │    → "Restaurar padrões": volta para SchemaExtractorOptions.Default
+        │  banner de aviso automático para schemas > 5.000 campos
+        │  filtro Status abre em "Disponível" por padrão
+```
+
+### Análise de pasta (batch)
+
+```
+Usuário clica "Selecionar pasta"
+       │
+       ▼
+MainForm.BatchButton_Click
+       │  Directory.GetFiles("*.frx") ordenado por nome
+       │  Exibe lista de arquivos no ListBox antes de analisar
+       │  Habilita botão "Analisar"
+       ▼
+Usuário clica "Analisar"
+       │  _batchCts = new CancellationTokenSource()
+       │  Botão "✕ Cancelar" fica visível
+       ▼
+AnalisarPastaAsync(arquivos[], token)
+       │
+       └── Para cada arquivo (sequencial, um por vez):
+              │  Atualiza ProgressBar + label "Analisando arquivo N de M — Nome.frx"
+              │
+              ▼
+           Task.Run(token):
+              │  XDocument.Load(caminho)   ← local ao lambda, GC coleta antes do próximo
+              │  FrxAnalyzer.Analyze(doc, _ruleConfig)
+              ▼
+           List<RuleResult>
+              │
+              ▼
+           AdicionarResultadosAoGrid()   ← incrementalmente, não só ao final
+              │
+              ▼
+           _progressBar.Value++
+
+       │  (após todos os arquivos)
+       ▼
+ReordenarGridPorSeveridade()   ← ordena _results e reconstrói grid
+       │
+       ▼
+"Concluído — N arquivo(s) analisado(s)"  ← label permanece visível
+Botão "✕ Cancelar" some
+
+Cancelamento:
+  Usuário clica "✕ Cancelar"
+       │  _batchCts.Cancel()
+       │  OperationCanceledException propagada
+       ▼
+  "Análise cancelada pelo usuário."
+  Resultados parciais já exibidos permanecem no grid
 ```
 
 ---
@@ -394,7 +496,40 @@ public class RuleResult
     public string Message       { get; set; }   // Descrição curta
     public string Detail        { get; set; }   // Contexto adicional (linha, valor)
 }
+
+public class SchemaField
+{
+    public string EntityAlias        { get; init; }  // Ex: "Titulo" ou "Titulo.Devedor"
+    public string FieldName          { get; init; }  // Ex: "ValorTotal"
+    public string DataType           { get; init; }  // Ex: "System.Decimal" ou "null"
+    public string FullPath           { get; }        // "[Dados.Titulo.ValorTotal]"
+    public string DisplayType        { get; }        // "Decimal", "⚠ null (objeto)", etc.
+    public bool   IsNonScalar        { get; }        // DataType == "null"
+    public List<string> UsedInComponents { get; init; } // TextObjects que referenciam
+    public bool   IsUsed             { get; }        // UsedInComponents.Count > 0
+}
 ```
+
+---
+
+## Considerações de performance
+
+### Análise de regras
+- Roda em `Task.Run` — UI não trava durante análise
+- `XDocument` declarado dentro do lambda: sai de escopo ao fim, GC coleta antes do próximo arquivo
+- Arquivo único: `_analisandoArquivo` previne análises paralelas por double-click
+
+### Explorador de Schema
+- `DataGridView` em Virtual Mode: renderiza apenas as ~20 linhas visíveis na tela, independente do volume total
+- Filtro assíncrono com `Task.Run` + `CancellationToken`: LINQ roda em background, último filtro vence
+- Debounce 150ms no `TextChanged`: evita rebuild do grid a cada tecla
+- `SchemaExtractorOptions.Default` (MaxDepth=5): reduz ~82% dos campos antes de qualquer filtro de UI
+- `BtnReaplicar` é `async`: reextração com `Unrestricted` (~26.000 campos) não congela a janela
+
+### Batch (pasta)
+- Processamento sequencial intencional: evita acúmulo de múltiplos `XDocument` grandes em memória
+- Resultados adicionados ao grid incrementalmente: usuário vê progresso em tempo real
+- `CancellationToken` propagado por todo o loop: cancelamento responde imediatamente
 
 ---
 
