@@ -89,9 +89,10 @@ List<SchemaField>
        │
        ▼
 SchemaExplorerForm(fields, fileName).ShowDialog()
-       │  filtros em tempo real (texto, tipo, entidade, null-only, used-only)
-       │  colorização por DataType
-       │  duplo-clique / botão copia FullPath para clipboard
+        │  filtros em tempo real (texto, tipo, entidade, null-only, used-only)
+        │  colorização por DataType
+        │  duplo-clique / botão copia FullPath para clipboard
+        │  exporta CSV (UTF-8 BOM, 6 colunas: Entidade;Campo;Tipo;É Objeto?;Caminho completo;Usado em)
 ```
 
 ---

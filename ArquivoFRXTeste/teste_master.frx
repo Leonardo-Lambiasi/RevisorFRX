@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Report ScriptLanguage="CSharp">
+  <ScriptText><![CDATA[
+    using System;
+    using System.Text.RegularExpressions;
+
+    // Code-4 POSITIVO: contexto CNPJ + regex de apenas dígitos -> 1 finding (DigitOnlyRegex)
+    bool ValidarCnpj(string cnpj) {
+        return Regex.IsMatch(cnpj, @"\d{14}");
+    }
+
+    // Code-2 POSITIVO: cast direto (int) em Row[] sem verificação -> 1 finding
+    void ProcessarTitulo() {
+        var quantidade = (int)Row["Quantidade"];
+    }
+
+    // Code-3 POSITIVO: AplicarMascaraDeCPF ausente -> 1 finding
+    void AplicarMascaraDeDocumento() { }
+    void ExtrairCaracteresNumericos() { }
+    void AplicarMascaraDeCNPJ() { }
+    // AplicarMascaraDeCPF propositalmente ausente
+  ]]></ScriptText>
+
+  <Dictionary>
+    <BusinessObjectDataSource Name="Dados" Alias="Dados" DataType="null" Enabled="true">
+
+      <!-- Entidade Titulo: campos escalares variados, suportando testes de profundidade 1-5 -->
+      <BusinessObjectDataSource Name="Titulo" Alias="Titulo" DataType="null">
+        <Column Name="Id"             DataType="System.Guid"/>
+        <Column Name="Numero"         DataType="System.String"/>
+        <Column Name="ValorTotal"     DataType="System.Decimal"/>
+        <Column Name="DataVencimento" DataType="System.DateTime"/>
+        <Column Name="Quantidade"     DataType="System.Int32"/>
+        <Column Name="Ativo"          DataType="System.Boolean"/>
+        <Column Name="Desconto"       DataType="System.Decimal"/>
+        <!-- Campo null para Expr-2: DataType=null -> tipo "" em SchemaBuilder -->
+        <Column Name="DevedorInfo"    DataType="null"/>
+
+        <!-- Nível 3: Devedor -->
+        <BusinessObjectDataSource Name="Devedor" Alias="Devedor" DataType="null">
+          <Column Name="Nome"  DataType="System.String"/>
+          <Column Name="CNPJ"  DataType="System.String"/>
+          <Column Name="Email" DataType="System.String"/>
+
+          <!-- Nível 4: Endereco -->
+          <BusinessObjectDataSource Name="Endereco" Alias="Endereco" DataType="null">
+            <Column Name="Logradouro" DataType="System.String"/>
+            <Column Name="CEP"        DataType="System.Int32"/>
+            <Column Name="Cidade"     DataType="System.String"/>
+
+            <!-- Nível 5: Municipio — incluso com MaxDepth=5, excluído com MaxDepth=4 -->
+            <BusinessObjectDataSource Name="Municipio" Alias="Municipio" DataType="null">
+              <Column Name="CodigoIBGE" DataType="System.Int32"/>
+              <Column Name="UF"         DataType="System.String"/>
+            </BusinessObjectDataSource>
+          </BusinessObjectDataSource>
+        </BusinessObjectDataSource>
+      </BusinessObjectDataSource>
+
+      <!-- DadosDoCartorio: entidade adicional para testar detecção de uso -->
+      <BusinessObjectDataSource Name="DadosDoCartorio" Alias="DadosDoCartorio" DataType="null">
+        <Column Name="Nome"     DataType="System.String"/>
+        <Column Name="CNPJ"     DataType="System.String"/>
+        <Column Name="Telefone" DataType="System.String"/>
+      </BusinessObjectDataSource>
+
+      <!-- ValidationResult: deve ser filtrado por ExcludedSegments no Explorador -->
+      <BusinessObjectDataSource Name="ValidationResult" Alias="ValidationResult" DataType="null">
+        <Column Name="IsValid" DataType="System.Boolean"/>
+        <Column Name="Erros"   DataType="null"/>
+      </BusinessObjectDataSource>
+
+    </BusinessObjectDataSource>
+  </Dictionary>
+
+  <ReportPage>
+
+    <!-- Ref-1 POSITIVO: MasterComponent aponta para nome inexistente (1 finding) -->
+    <DataBand Name="BandaFilhaInvalida" MasterComponent="MestreInexistente"/>
+
+    <!-- Ref-2 POSITIVO: DataSource não declarado no Dictionary (1 finding) -->
+    <DataBand Name="BandaFonteInvalida" DataSource="FonteQueNaoExiste"/>
+
+    <!-- Banda principal com DataSource válido: sem Ref-2 -->
+    <DataBand Name="BandaPrincipal" DataSource="Dados">
+
+      <!-- ══ Campos usados pelo Explorador de Schema (EnrichWithUsage) ══ -->
+      <!-- Cada TextObject abaixo deve aparecer como "✅ Em uso" no Explorador -->
+
+      <!-- Profundidade 2: Titulo.Numero (String) -->
+      <TextObject Name="txtNumero"   Text="[Dados.Titulo.Numero]"/>
+      <!-- Profundidade 2: Titulo.ValorTotal (Decimal) — Format correto, sem Format-1 -->
+      <TextObject Name="txtValor"    Text="[Dados.Titulo.ValorTotal]"     Format="Currency" Format.DecimalDigits="2"/>
+      <!-- Profundidade 2: Titulo.DataVencimento (DateTime) — Format correto, sem Format-1 -->
+      <TextObject Name="txtData"     Text="[Dados.Titulo.DataVencimento]" Format="Date"/>
+      <!-- Profundidade 3: Titulo.Devedor.Nome (String) -->
+      <TextObject Name="txtDevNome"  Text="[Dados.Titulo.Devedor.Nome]"/>
+      <!-- Profundidade 4: Titulo.Devedor.Endereco.CEP (Int32) -->
+      <TextObject Name="txtCEP"      Text="[Dados.Titulo.Devedor.Endereco.CEP]"/>
+      <!-- Profundidade 5: Municipio.CodigoIBGE — incluído com MaxDepth=5, filtrado com MaxDepth=4 -->
+      <TextObject Name="txtIBGE"     Text="[Dados.Titulo.Devedor.Endereco.Municipio.CodigoIBGE]"/>
+      <!-- DadosDoCartorio.Nome (String) -->
+      <TextObject Name="txtCartorio" Text="[Dados.DadosDoCartorio.Nome]"/>
+
+      <!-- ══ Casos positivos de regras (1 finding cada) ══ -->
+
+      <!-- Ref-12 POSITIVO: CanGrow no TextObject, banda sem CanGrow (1 finding) -->
+      <TextObject Name="txtCanGrow" CanGrow="true" Text="[Dados.Titulo.Numero]"/>
+
+      <!-- Ref-10 POSITIVO: colchete aberto sem fechar (1 finding) -->
+      <TextObject Name="txtDesbalanceado" Text="Total: [Dados.Titulo.Numero"/>
+
+      <!-- Expr-1 POSITIVO: campo inexistente no schema (1 finding) -->
+      <TextObject Name="txtExpr1" Text="[Dados.Titulo.CampoInexistente]"/>
+
+      <!-- Expr-2 POSITIVO: campo DevedorInfo tem DataType=null (1 finding) -->
+      <TextObject Name="txtExpr2" Text="[Dados.Titulo.DevedorInfo]"/>
+
+      <!-- Format-1 POSITIVO: Decimal sem Format (1 finding) -->
+      <TextObject Name="txtDesconto" Text="[Dados.Titulo.Desconto]"/>
+
+      <!-- Format-6 POSITIVO: HTML sem TextRenderType=HtmlTags (1 finding) -->
+      <TextObject Name="txtHtml" Text="&lt;b&gt;Título do Relatório&lt;/b&gt;"/>
+
+      <!-- Format-6 NEGATIVO: HTML com TextRenderType ativado (sem finding) -->
+      <TextObject Name="txtHtmlOk" Text="&lt;i&gt;Status ok&lt;/i&gt;" TextRenderType="HtmlTags"/>
+
+      <!-- Format-7 POSITIVO: CalcCheckSum diferente de false (1 finding) -->
+      <BarcodeObject Name="codigoBarras" Barcode.CalcCheckSum="true"/>
+
+      <!-- Format-7 NEGATIVO: CalcCheckSum=false (sem finding) -->
+      <BarcodeObject Name="codigoBarrasOk" Barcode.CalcCheckSum="false"/>
+
+    </DataBand>
+
+    <!-- Banda com CanGrow=true: caso negativo de Ref-12 -->
+    <DataBand Name="BandaCanGrow" CanGrow="true" DataSource="Dados">
+      <!-- Ref-12 NEGATIVO: CanGrow no TextObject E na banda (sem finding) -->
+      <TextObject Name="txtCanGrowOk" CanGrow="true" Text="[Dados.Titulo.Numero]"/>
+    </DataBand>
+
+  </ReportPage>
+</Report>

@@ -70,21 +70,30 @@ Todas as regras podem ser ativadas/desativadas individualmente pelo botão **⚙
 ### Explorador de Schema
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│  Explorador de Schema — NomeArquivo.frx                              │
-│                                                                      │
-│  🔍 [______________]  Tipo: [▼ todos ]  Entidade: [▼ todas ]        │
-│  □ Apenas ⚠ null (objeto)    □ Apenas campos usados no relatório    │
-│  ──────────────────────────────────────────────────────────────────  │
-│  Entidade │ Campo │ Tipo │ Caminho completo │ Usado em               │
-│  42 campo(s) exibido(s) de 87 total  [📋 Copiar caminho]  [Fechar]  │
-└──────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Explorador de Schema — NomeArquivo.frx                       │
+│                                                              │
+│ 🔍 [________] Tipo:[▼todos] Entidade:[▼todas] Status:[▼Disp]│
+│ □ Apenas ⚠ null  □ Apenas campos usados  [⚙ Avançado ▼]    │
+│ ⚠ Schema grande (26.445 campos). Use os filtros acima.      │
+│ ────────────────────────────────────────────────────────────│
+│ Entidade│Campo│Tipo│Caminho completo│Usado em│Status         │
+│ ────────────────────────────────────────────────────────────│
+│ 18 campo(s) de 3.754 extraídos (26.445 no schema completo)  │
+│            [📥 Exportar CSV] [📋 Copiar caminho]  [Fechar]  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-- Pesquisa em tempo real por entidade, campo ou caminho completo
-- Filtro por tipo de dado e por entidade
-- Colorização por tipo: azul = Decimal/Double, lilás = DateTime, verde = Int*, amarelo = null
-- Duplo-clique ou `[📋 Copiar caminho]` copia `[Dados.Entidade.Campo]` para o clipboard
+- Pesquisa em tempo real com debounce 150ms
+- Filtro por tipo, entidade e status (Em uso / Disponível)
+- Status ⚪ Disponível: campo mapeado no código mas não usado no layout — acione o time de projetos se precisar
+- Status ✅ Em uso: campo referenciado em algum TextObject
+- Coluna "Usado em": nome (1 uso), "N componentes" (2+) com tooltip da lista completa
+- Duplo-clique, Enter ou [📋 Copiar caminho] copia [Dados.Entidade.Campo] para o clipboard
+- [📥 Exportar CSV] exporta campos filtrados (UTF-8 BOM, ;)
+- Painel [⚙ Avançado]: profundidade máxima e segmentos excluídos configuráveis; "Reaplicar" reextrai sem bloquear UI
+- Filtro padrão: MaxDepth=5, exclui ValidationResult — reduz ~82% dos campos sem perder campos de negócio
+- Banner de aviso automático para schemas > 5.000 campos
 
 ---
 
@@ -267,6 +276,15 @@ dotnet run -- -f "ArquivoFRXTeste/teste_completo_todas_regras.frx"
 | 12 | `Code2Rule.cs` / `Code3Rule.cs` | Roslyn `MethodDeclarationSyntax` não capturava métodos em scripts file-scoped (típico do FastReport) — corrigido com `LocalFunctionStatementSyntax` |
 | 13 | `MainForm.cs` | Race condition: `_selectedFilePath` lido dentro de `Task.Run` podia mudar se usuário clicasse em outro arquivo |
 | 14 | `SchemaExplorerForm.cs` | `CopySelectedPath()` lançava exceção quando grid estava vazio (coluna "Vazio" não tem campo "Caminho") |
+| 15 | MainForm.cs | Double-click em Analisar disparava duas análises simultâneas — _analisandoArquivo + dispose do _cts anterior |
+| 16 | MainForm.cs | Botão Cancelar reiniciava análise de arquivo único em vez de cancelar — AnalyzeButton_Click agora detecta _analisandoArquivo e chama _cts?.Cancel() |
+| 17 | SchemaExplorerForm.cs | BtnReaplicar bloqueava UI thread — async + Task.Run |
+| 18 | SchemaExplorerForm.cs | Banner schema grande não atualizava após Reaplicar — AtualizarBannerSchemaGrande() chamado a cada extração |
+| 19 | MainForm.cs | Mensagem "Concluído" sumia imediatamente — _lblProgress.Visible = false removido do finally |
+| 20 | MainForm.cs | Botões desabilitados visualmente idênticos aos habilitados — SetButtonEnabled() com cor explícita |
+| 21 | SchemaExtractor.cs | EnrichWithUsage usava OrdinalIgnoreCase — divergência com Expr1Rule; corrigido para Ordinal |
+| 22 | MainForm.cs | CSV exportado sem BOM UTF-8 — acentos errados no Excel pt-BR |
+| 23 | MainForm.cs | ReordenarGridPorSeveridade reutilizava DataGridViewRow após Clear() — reconstruído a partir de _results |
 
 ---
 
@@ -278,6 +296,8 @@ dotnet run -- -f "ArquivoFRXTeste/teste_completo_todas_regras.frx"
 - `Format-1` não analisa TextObjects cujo Text contenha chamadas de função (parênteses) para evitar falsos positivos.
 - `Format-7` verifica `Barcode.CalcCheckSum` — se o atributo não existe no XML, a regra não dispara (assinatura do FastReport para tipos como QR Code não utilizam este atributo).
 - `Ref-3` removido — taxa de falso positivo >70% nos modelos reais (eventos legados/tratados externamente). O código (`Ref3Rule.cs`) permanece no repositório como referência, mas não é registrado.
+- O Explorador de Schema usa filtro por profundidade (padrão MaxDepth=5) e exclui segmentos de infraestrutura (ValidationResult). Campos em profundidade > 5 não aparecem por padrão — ajuste em ⚙ Avançado se necessário.
+- O modo batch processa arquivos sequencialmente para evitar acúmulo de XDocument grandes em memória.
 
 ---
 

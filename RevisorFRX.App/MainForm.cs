@@ -14,6 +14,10 @@ public class MainForm : Form
     private RuleConfig _ruleConfig = RuleConfig.DefaultUI();
     private CancellationTokenSource? _cts;
     private CancellationTokenSource? _batchCts;
+    private bool _analisandoArquivo;
+
+    private static readonly Color _colorBtnGreen    = Color.FromArgb(25, 135, 84);
+    private static readonly Color _colorBtnDisabled = Color.FromArgb(150, 150, 150);
 
     private readonly Label _fileLabel;
     private readonly Button _analyzeButton;
@@ -70,7 +74,7 @@ public class MainForm : Form
             Size = new Size(28, 28),
             Font = new Font("Segoe UI", 12),
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(25, 135, 84),
+            BackColor = _colorBtnDisabled,
             ForeColor = Color.White,
             Cursor = Cursors.Hand,
             UseVisualStyleBackColor = false,
@@ -161,7 +165,7 @@ public class MainForm : Form
             Size = new Size(102, 30),
             Enabled = false,
             FlatStyle = FlatStyle.Flat,
-            BackColor = Color.FromArgb(25, 135, 84),
+            BackColor = _colorBtnDisabled,
             ForeColor = Color.White,
             Cursor = Cursors.Hand,
             UseVisualStyleBackColor = false
@@ -329,6 +333,8 @@ public class MainForm : Form
         _grid.Rows.Clear();
         _badgePanel.Visible = false;
         _exportButton.Visible = false;
+        _lblProgress.Visible = false;
+        _lblProgress.Text = "";
     }
 
     private void CancelarBatchSeAtivo()
@@ -341,7 +347,7 @@ public class MainForm : Form
             _progressBar.Visible = false;
             _lblProgress.Visible = false;
             _btnCancelar.Visible = false;
-            _analyzeButton.Enabled = true;
+            SetButtonEnabled(_analyzeButton, true, _colorBtnGreen);
             Cursor = Cursors.Default;
         }
     }
@@ -362,8 +368,8 @@ public class MainForm : Form
             _frxFiles = null;
             _fileLabel.Text = Path.GetFileName(_selectedFilePath);
             _fileLabel.ForeColor = Color.FromArgb(33, 37, 41);
-            _analyzeButton.Enabled = true;
-            _btnSchema.Enabled = true;
+            SetButtonEnabled(_analyzeButton, true, _colorBtnGreen);
+            SetButtonEnabled(_btnSchema, true, _colorBtnGreen);
             _frxListBox.Visible = false;
             LimparResultados();
         }
@@ -382,7 +388,7 @@ public class MainForm : Form
 
         _selectedFolderPath = dialog.SelectedPath;
         _selectedFilePath = null;
-        _btnSchema.Enabled = false;
+        SetButtonEnabled(_btnSchema, false, _colorBtnGreen);
 
         try
         {
@@ -397,7 +403,7 @@ public class MainForm : Form
             _frxFiles = null;
             _fileLabel.Text = $"📁 {_selectedFolderPath}  (erro ao ler)";
             _fileLabel.ForeColor = Color.Gray;
-            _analyzeButton.Enabled = false;
+            SetButtonEnabled(_analyzeButton, false, _colorBtnGreen);
             _frxListBox.Visible = false;
             return;
         }
@@ -406,7 +412,7 @@ public class MainForm : Form
         {
             _fileLabel.Text = $"📁 {_selectedFolderPath}  (0 arquivos .frx)";
             _fileLabel.ForeColor = Color.Gray;
-            _analyzeButton.Enabled = false;
+            SetButtonEnabled(_analyzeButton, false, _colorBtnGreen);
             _frxListBox.Visible = false;
             MessageBox.Show("Nenhum arquivo .frx encontrado na pasta.", "RevisorFRX",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -415,7 +421,7 @@ public class MainForm : Form
 
         _fileLabel.Text = $"📁 {_selectedFolderPath}  ({_frxFiles.Length} arquivo(s) .frx)";
         _fileLabel.ForeColor = Color.FromArgb(33, 37, 41);
-        _analyzeButton.Enabled = true;
+        SetButtonEnabled(_analyzeButton, true, _colorBtnGreen);
 
         _frxListBox.Items.Clear();
         foreach (var f in _frxFiles)
@@ -428,6 +434,12 @@ public class MainForm : Form
     private async void AnalyzeButton_Click(object? sender, EventArgs e)
     {
         if (_batchCts != null) return; // batch já em andamento
+
+        if (_analisandoArquivo)
+        {
+            _cts?.Cancel();
+            return;
+        }
 
         if (!string.IsNullOrEmpty(_selectedFolderPath) && _frxFiles != null && _frxFiles.Length > 0)
         {
@@ -456,7 +468,7 @@ public class MainForm : Form
             PopulateGrid();
             UpdateBadges();
             _badgePanel.Visible = true;
-            _exportButton.Visible = true;
+            _exportButton.Visible = _results.Count > 0;
         }
         catch (OperationCanceledException)
         {
@@ -477,7 +489,7 @@ public class MainForm : Form
         _batchCts = new CancellationTokenSource();
         var token = _batchCts.Token;
 
-        _analyzeButton.Enabled = false;
+        SetButtonEnabled(_analyzeButton, false, _colorBtnGreen);
         _btnCancelar.Visible = true;
         _badgePanel.Visible = false;
         _exportButton.Visible = false;
@@ -557,28 +569,30 @@ public class MainForm : Form
         finally
         {
             _progressBar.Visible = false;
-            _lblProgress.Visible = false;
             _btnCancelar.Visible = false;
-            _analyzeButton.Enabled = true;
+            SetButtonEnabled(_analyzeButton, true, _colorBtnGreen);
             _batchCts?.Dispose();
             _batchCts = null;
             Cursor = Cursors.Default;
         }
     }
 
+    private void AdicionarLinhaAoGrid(RuleResult r)
+    {
+        var idx = _grid.Rows.Add(r.RuleCode, r.Severity, r.FileName, r.ComponentName, r.Message, r.Detail);
+        _grid.Rows[idx].DefaultCellStyle.BackColor = r.Severity switch
+        {
+            Severity.Error   => Color.FromArgb(255, 220, 220),
+            Severity.Warning => Color.FromArgb(255, 243, 205),
+            Severity.Info    => Color.FromArgb(207, 226, 255),
+            _                => Color.White
+        };
+    }
+
     private void AdicionarResultadosAoGrid(List<RuleResult> resultados)
     {
         foreach (var r in resultados)
-        {
-            var idx = _grid.Rows.Add(r.RuleCode, r.Severity, r.FileName, r.ComponentName, r.Message, r.Detail);
-            _grid.Rows[idx].DefaultCellStyle.BackColor = r.Severity switch
-            {
-                Severity.Error   => Color.FromArgb(255, 220, 220),
-                Severity.Warning => Color.FromArgb(255, 243, 205),
-                Severity.Info    => Color.FromArgb(207, 226, 255),
-                _                => Color.White
-            };
-        }
+            AdicionarLinhaAoGrid(r);
 
         UpdateBadges();
         _grid.Refresh();
@@ -586,27 +600,21 @@ public class MainForm : Form
 
     private void ReordenarGridPorSeveridade()
     {
-        var linhas = new List<DataGridViewRow>();
-        foreach (DataGridViewRow row in _grid.Rows)
-            linhas.Add(row);
-
-        var ordenadas = linhas
-            .OrderBy(r =>
+        _results.Sort((a, b) =>
+        {
+            static int Ordem(Severity s) => s switch
             {
-                var sev = r.Cells["Severidade"].Value?.ToString();
-                return sev switch
-                {
-                    nameof(Severity.Error)   => 0,
-                    nameof(Severity.Warning) => 1,
-                    nameof(Severity.Info)    => 2,
-                    _                        => 3
-                };
-            })
-            .ToList();
+                Severity.Error   => 0,
+                Severity.Warning => 1,
+                Severity.Info    => 2,
+                _                => 3
+            };
+            return Ordem(a.Severity).CompareTo(Ordem(b.Severity));
+        });
 
         _grid.Rows.Clear();
-        foreach (var row in ordenadas)
-            _grid.Rows.Add(row);
+        foreach (var r in _results)
+            AdicionarLinhaAoGrid(r);
     }
 
     private void BtnCancelar_Click(object? sender, EventArgs e)
@@ -616,6 +624,9 @@ public class MainForm : Form
 
     private void IniciarModoAnalise()
     {
+        _analisandoArquivo = true;
+        _cts?.Cancel();
+        _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _analyzeButton.Text = "Cancelar";
         _analyzeButton.BackColor = Color.FromArgb(220, 53, 69);
@@ -629,28 +640,32 @@ public class MainForm : Form
 
     private void FinalizarModoAnalise()
     {
+        _analisandoArquivo = false;
         _cts?.Dispose();
         _cts = null;
         _analyzeButton.Text = "Analisar";
-        _analyzeButton.BackColor = Color.FromArgb(25, 135, 84);
-        _analyzeButton.ForeColor = Color.White;
-        _analyzeButton.Enabled = true;
+        SetButtonEnabled(_analyzeButton, true, _colorBtnGreen);
         Cursor = Cursors.Default;
+    }
+
+    private static void SetButtonEnabled(Button btn, bool enabled, Color enabledColor)
+    {
+        btn.Enabled   = enabled;
+        btn.BackColor = enabled ? enabledColor : _colorBtnDisabled;
     }
 
     private void PopulateGrid()
     {
         _grid.Rows.Clear();
         foreach (var r in _results)
+            AdicionarLinhaAoGrid(r);
+
+        if (_results.Count == 0)
         {
-            var idx = _grid.Rows.Add(r.RuleCode, r.Severity, r.FileName, r.ComponentName, r.Message, r.Detail);
-            _grid.Rows[idx].DefaultCellStyle.BackColor = r.Severity switch
-            {
-                Severity.Error   => Color.FromArgb(255, 220, 220),
-                Severity.Warning => Color.FromArgb(255, 243, 205),
-                Severity.Info    => Color.FromArgb(207, 226, 255),
-                _                => Color.White
-            };
+            var idx = _grid.Rows.Add("✅", "", "", "", "Nenhum problema encontrado neste arquivo.", "");
+            var row = _grid.Rows[idx];
+            row.DefaultCellStyle.ForeColor = Color.FromArgb(50, 160, 50);
+            row.DefaultCellStyle.BackColor = Color.FromArgb(240, 255, 240);
         }
     }
 
@@ -713,7 +728,8 @@ public class MainForm : Form
             sb.AppendLine(linha);
         }
 
-        File.WriteAllText(filePath, sb.ToString(), System.Text.Encoding.UTF8);
+        File.WriteAllText(filePath, sb.ToString(),
+            new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
     }
 
     private static string Escapar(string valor)

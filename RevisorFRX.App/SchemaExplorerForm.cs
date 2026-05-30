@@ -1,10 +1,25 @@
 using RevisorFRX.Core.Models;
+using RevisorFRX.Core.Services;
+using System.Xml.Linq;
 
 namespace RevisorFRX.App;
 
 public class SchemaExplorerForm : Form
 {
-    private readonly List<SchemaField> _allFields;
+    private List<SchemaField> _allFields;
+    private string? _frxPath;
+    private SchemaExtractorOptions _currentOptions = SchemaExtractorOptions.Default;
+    private int _extractedCount;
+    private int _totalSemFiltro;
+    private bool _isCustomOptions;
+    private int _gridOriginalTop;
+    private int _gridOriginalHeight;
+    private const int AdvancedPanelHeight = 72;
+
+    private GroupBox _advancedPanel = null!;
+    private NumericUpDown _nudDepth = null!;
+    private TextBox _txtSegmentos = null!;
+
     private readonly TextBox _searchBox;
     private readonly ComboBox _typeCombo;
     private readonly ComboBox _entityCombo;
@@ -19,10 +34,17 @@ public class SchemaExplorerForm : Form
     private List<SchemaField> _visibleFields = [];
     private string? _sortColumn;
     private bool _sortAscending = true;
+    private Label? _bannerSchemaGrande;
+    private Button _btnReaplicar = null!;
+    private Button _btnRestaurar = null!;
+    private Button _btnAvancado  = null!;
+    private bool _suppressFilters;
 
-    public SchemaExplorerForm(List<SchemaField> fields, string frxFileName)
+    public SchemaExplorerForm(List<SchemaField> fields, string frxFileName, string? frxPath = null)
     {
         _allFields = fields;
+        _frxPath = frxPath;
+        _extractedCount = fields.Count;
 
         SuspendLayout();
 
@@ -77,7 +99,7 @@ public class SchemaExplorerForm : Form
             DropDownStyle = ComboBoxStyle.DropDownList
         };
 
-        // --- Row 2: checkboxes + status combo ---
+        // --- Row 2: checkboxes + status combo + advanced button ---
         _chkNullOnly = new CheckBox
         {
             Text = "Apenas ⚠ null (objeto)",
@@ -106,6 +128,20 @@ public class SchemaExplorerForm : Form
             DropDownStyle = ComboBoxStyle.DropDownList
         };
 
+        _btnAvancado = new Button
+        {
+            Text = "⚙ Avançado ▼",
+            Location = new Point(648, 40),
+            Size = new Size(105, 27),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(108, 117, 125),
+            ForeColor = Color.White,
+            Cursor = Cursors.Hand,
+            UseVisualStyleBackColor = false
+        };
+        _btnAvancado.FlatAppearance.BorderSize = 0;
+        _btnAvancado.Click += BtnAvancado_Click;
+
         // --- Separator ---
         var separator = new Panel
         {
@@ -114,32 +150,18 @@ public class SchemaExplorerForm : Form
             BackColor = Color.FromArgb(222, 226, 230)
         };
 
-        // --- Conditional warning label for large schemas ---
-        // warning at y=73 (height=28), pushes grid from y=78 to y=102 (height 456→432)
-        int gridTop = 78;
-        int gridHeight = 456;
-        Label? warningLabel = null;
-        if (fields.Count > 5000)
-        {
-            gridTop = 102;
-            gridHeight = 432;
-            warningLabel = new Label
-            {
-                Text = $"⚠ Schema grande ({fields.Count} campos). Use os filtros acima — \"Disponível\" mostra apenas campos não usados no layout.",
-                BackColor = Color.FromArgb(80, 60, 20),
-                ForeColor = Color.FromArgb(255, 210, 100),
-                Location = new Point(12, 73),
-                Size = new Size(896, 28),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = Font
-            };
-        }
+        // Grid starts at default position; AtualizarBannerSchemaGrande adjusts after controls are added
+        _gridOriginalTop = 78;
+        _gridOriginalHeight = 456;
+
+        // --- Advanced panel (initially hidden) ---
+        BuildAdvancedPanel(78);
 
         // --- Grid ---
         _grid = new DataGridView
         {
-            Location = new Point(12, gridTop),
-            Size = new Size(896, gridHeight),
+            Location = new Point(12, 78),
+            Size = new Size(896, 456),
             ReadOnly = true,
             AllowUserToAddRows = false,
             AllowUserToDeleteRows = false,
@@ -173,6 +195,14 @@ public class SchemaExplorerForm : Form
         {
             if (e.RowIndex >= 0 && _grid.Columns.Contains("Caminho"))
                 CopySelectedPath();
+        };
+        _grid.KeyDown += (_, e) =>
+        {
+            if (e.KeyCode == Keys.Enter && _grid.SelectedRows.Count > 0)
+            {
+                e.Handled = true;
+                CopySelectedPath();
+            }
         };
         _grid.ColumnHeaderMouseClick += Grid_ColumnHeaderMouseClick;
         _grid.CellToolTipTextNeeded += Grid_CellToolTipTextNeeded;
@@ -231,12 +261,10 @@ public class SchemaExplorerForm : Form
         Controls.AddRange(new Control[]
         {
             lblSearch, _searchBox, lblTipo, _typeCombo, lblEntidade, _entityCombo,
-            _chkNullOnly, _chkUsedOnly, lblStatus, _cboStatus, separator, _grid,
+            _chkNullOnly, _chkUsedOnly, lblStatus, _cboStatus, _btnAvancado,
+            separator, _advancedPanel, _grid,
             _statusLabel, btnExport, _btnCopy, btnFechar
         });
-
-        if (warningLabel != null)
-            Controls.Add(warningLabel);
 
         CancelButton = btnFechar;
 
@@ -250,7 +278,8 @@ public class SchemaExplorerForm : Form
         _debounceTimer = new System.Windows.Forms.Timer { Interval = 150 };
         _debounceTimer.Tick += (_, _) => { _debounceTimer.Stop(); ApplyFilters(); };
 
-        // Populate combos and initial grid, then wire up filter events
+        AtualizarBannerSchemaGrande(fields.Count);
+
         PopulateFilterCombos();
         ApplyFilters();
 
@@ -264,24 +293,284 @@ public class SchemaExplorerForm : Form
         ResumeLayout(false);
     }
 
+    private void BuildAdvancedPanel(int top)
+    {
+        _advancedPanel = new GroupBox
+        {
+            Text = "Filtros avançados",
+            Location = new Point(12, top),
+            Size = new Size(896, AdvancedPanelHeight),
+            Visible = false,
+            Font = Font
+        };
+
+        var lblDepth = new Label
+        {
+            Text = "Profundidade máxima:",
+            Location = new Point(8, 22),
+            AutoSize = true
+        };
+
+        _nudDepth = new NumericUpDown
+        {
+            Location = new Point(148, 19),
+            Size = new Size(55, 23),
+            Minimum = 1,
+            Maximum = 10,
+            Value = SchemaExtractorOptions.Default.MaxDepth
+        };
+
+        var lblSegmentos = new Label
+        {
+            Text = "Segmentos excluídos:",
+            Location = new Point(215, 22),
+            AutoSize = true
+        };
+
+        _txtSegmentos = new TextBox
+        {
+            Location = new Point(355, 19),
+            Size = new Size(200, 23),
+            Text = string.Join(", ", SchemaExtractorOptions.Default.ExcludedSegments)
+        };
+
+        _btnReaplicar = new Button
+        {
+            Text = "Reaplicar",
+            Location = new Point(567, 17),
+            Size = new Size(92, 27),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(13, 110, 253),
+            ForeColor = Color.White,
+            Cursor = Cursors.Hand,
+            UseVisualStyleBackColor = false
+        };
+        _btnReaplicar.FlatAppearance.BorderSize = 0;
+        _btnReaplicar.Click += BtnReaplicar_Click;
+
+        _btnRestaurar = new Button
+        {
+            Text = "Restaurar padrões",
+            Location = new Point(667, 17),
+            Size = new Size(150, 27),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = Color.FromArgb(108, 117, 125),
+            ForeColor = Color.White,
+            Cursor = Cursors.Hand,
+            UseVisualStyleBackColor = false
+        };
+        _btnRestaurar.FlatAppearance.BorderSize = 0;
+        _btnRestaurar.Click += BtnRestaurar_Click;
+
+        var lblHint = new Label
+        {
+            Text = "(separados por vírgula)",
+            Location = new Point(355, 46),
+            AutoSize = true,
+            ForeColor = Color.Gray,
+            Font = new Font("Segoe UI", 7.5F, FontStyle.Italic)
+        };
+
+        _advancedPanel.Controls.AddRange(new Control[]
+        {
+            lblDepth, _nudDepth, lblSegmentos, _txtSegmentos,
+            _btnReaplicar, _btnRestaurar, lblHint
+        });
+    }
+
+    private void BtnAvancado_Click(object? sender, EventArgs e)
+    {
+        _advancedPanel.Visible = !_advancedPanel.Visible;
+        if (_advancedPanel.Visible)
+        {
+            _btnAvancado.Text = "⚙ Avançado ▲";
+            _grid.Top    = _gridOriginalTop + AdvancedPanelHeight;
+            _grid.Height = _gridOriginalHeight - AdvancedPanelHeight;
+        }
+        else
+        {
+            _btnAvancado.Text = "⚙ Avançado ▼";
+            _grid.Top    = _gridOriginalTop;
+            _grid.Height = _gridOriginalHeight;
+        }
+    }
+
+    private async void BtnReaplicar_Click(object? sender, EventArgs e)
+    {
+        var path = EnsureFrxPath();
+        if (path == null) return;
+
+        var options     = GetCurrentSchemaOptions();
+        var prevTotal   = _totalSemFiltro;
+
+        _btnReaplicar.Enabled = false;
+        _btnRestaurar.Enabled = false;
+        Cursor = Cursors.WaitCursor;
+
+        try
+        {
+            var (fields, totalSemFiltro) = await Task.Run(() =>
+            {
+                var doc = XDocument.Load(path);
+                var f   = SchemaExtractor.Extract(doc, options);
+                var tot = prevTotal == 0
+                    ? SchemaExtractor.Extract(doc, SchemaExtractorOptions.Unrestricted).Count
+                    : prevTotal;
+                return (f, tot);
+            });
+
+            _allFields       = fields;
+            _extractedCount  = fields.Count;
+            _currentOptions  = options;
+            _isCustomOptions = !OptionsAreDefault(options);
+            _totalSemFiltro  = totalSemFiltro;
+
+            AtualizarBannerSchemaGrande(totalSemFiltro);
+            RefreshFilterCombos();
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Erro ao reextrair schema:\n{ex.Message}", "Filtros avançados",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            _btnReaplicar.Enabled = true;
+            _btnRestaurar.Enabled = true;
+            Cursor = Cursors.Default;
+        }
+    }
+
+    private void BtnRestaurar_Click(object? sender, EventArgs e)
+    {
+        var def = SchemaExtractorOptions.Default;
+        _nudDepth.Value = def.MaxDepth;
+        _txtSegmentos.Text = string.Join(", ", def.ExcludedSegments);
+        if (_isCustomOptions)
+            BtnReaplicar_Click(sender, e);
+    }
+
+    private void AtualizarBannerSchemaGrande(int totalCampos)
+    {
+        bool precisaBanner = totalCampos > 5000;
+
+        if (!precisaBanner && _bannerSchemaGrande == null)
+            return;
+
+        if (precisaBanner && _bannerSchemaGrande != null)
+        {
+            _bannerSchemaGrande.Text =
+                $"⚠ Schema grande ({totalCampos:N0} campos). Use os filtros acima — " +
+                "\"Disponível\" mostra apenas campos não usados no layout.";
+            return;
+        }
+
+        if (!precisaBanner && _bannerSchemaGrande != null)
+        {
+            Controls.Remove(_bannerSchemaGrande);
+            _bannerSchemaGrande.Dispose();
+            _bannerSchemaGrande = null;
+            _gridOriginalTop    = 78;
+            _gridOriginalHeight = 456;
+        }
+        else // precisaBanner && _bannerSchemaGrande == null
+        {
+            _bannerSchemaGrande = new Label
+            {
+                Text      = $"⚠ Schema grande ({totalCampos:N0} campos). Use os filtros acima — " +
+                            "\"Disponível\" mostra apenas campos não usados no layout.",
+                BackColor = Color.FromArgb(80, 60, 20),
+                ForeColor = Color.FromArgb(255, 210, 100),
+                Location  = new Point(12, 73),
+                Size      = new Size(896, 28),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font      = Font
+            };
+            Controls.Add(_bannerSchemaGrande);
+            _gridOriginalTop    = 102;
+            _gridOriginalHeight = 432;
+        }
+
+        // Reposiciona o painel avançado e o grid conforme o novo gridOriginalTop
+        _advancedPanel.Location = new Point(_advancedPanel.Location.X, _gridOriginalTop);
+
+        if (_advancedPanel.Visible)
+        {
+            _grid.Top    = _gridOriginalTop + AdvancedPanelHeight;
+            _grid.Height = _gridOriginalHeight - AdvancedPanelHeight;
+        }
+        else
+        {
+            _grid.Top    = _gridOriginalTop;
+            _grid.Height = _gridOriginalHeight;
+        }
+    }
+
+    private string? EnsureFrxPath()
+    {
+        if (_frxPath != null) return _frxPath;
+        using var dlg = new OpenFileDialog
+        {
+            Filter = "FastReport (*.frx)|*.frx|Todos os arquivos (*.*)|*.*",
+            Title = "Selecione o arquivo .frx para reextração"
+        };
+        if (dlg.ShowDialog(this) != DialogResult.OK) return null;
+        _frxPath = dlg.FileName;
+        return _frxPath;
+    }
+
+    private SchemaExtractorOptions GetCurrentSchemaOptions()
+    {
+        var depth = (int)_nudDepth.Value;
+        var segments = _txtSegmentos.Text
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+        return new SchemaExtractorOptions { MaxDepth = depth, ExcludedSegments = segments };
+    }
+
+    private static bool OptionsAreDefault(SchemaExtractorOptions options)
+    {
+        var def = SchemaExtractorOptions.Default;
+        return options.MaxDepth == def.MaxDepth
+            && options.ExcludedSegments.Count == def.ExcludedSegments.Count
+            && options.ExcludedSegments.SequenceEqual(def.ExcludedSegments, StringComparer.OrdinalIgnoreCase);
+    }
+
     private void PopulateFilterCombos()
     {
-        _typeCombo.Items.Add("(todos os tipos)");
-        foreach (var t in _allFields.Select(f => f.DisplayType).Distinct().OrderBy(t => t))
-            _typeCombo.Items.Add(t);
-        _typeCombo.SelectedIndex = 0;
-
-        _entityCombo.Items.Add("(todas as entidades)");
-        foreach (var e in _allFields.Select(f => f.EntityAlias).Where(a => !string.IsNullOrEmpty(a)).Distinct().OrderBy(a => a))
-            _entityCombo.Items.Add(e);
-        _entityCombo.SelectedIndex = 0;
-
+        RefreshFilterCombos();
         _cboStatus.Items.AddRange(new object[] { "(todos)", "Em uso", "Disponível" });
-        _cboStatus.SelectedIndex = 2; // "Disponível" como padrão
+        _cboStatus.SelectedIndex = 2;
+    }
+
+    private void RefreshFilterCombos()
+    {
+        _suppressFilters = true;
+        try
+        {
+            _typeCombo.Items.Clear();
+            _typeCombo.Items.Add("(todos os tipos)");
+            foreach (var t in _allFields.Select(f => f.DisplayType).Distinct().OrderBy(t => t))
+                _typeCombo.Items.Add(t);
+            _typeCombo.SelectedIndex = 0;
+
+            _entityCombo.Items.Clear();
+            _entityCombo.Items.Add("(todas as entidades)");
+            foreach (var e in _allFields.Select(f => f.EntityAlias).Where(a => !string.IsNullOrEmpty(a)).Distinct().OrderBy(a => a))
+                _entityCombo.Items.Add(e);
+            _entityCombo.SelectedIndex = 0;
+        }
+        finally
+        {
+            _suppressFilters = false;
+        }
     }
 
     private void ApplyFilters()
     {
+        if (_suppressFilters) return;
+
         var search = _searchBox.Text.Trim();
         var selectedType   = _typeCombo.SelectedIndex   > 0 ? _typeCombo.SelectedItem?.ToString()   : null;
         var selectedEntity = _entityCombo.SelectedIndex > 0 ? _entityCombo.SelectedItem?.ToString() : null;
@@ -388,7 +677,6 @@ public class SchemaExplorerForm : Form
                 row.DefaultCellStyle.ForeColor = Color.FromArgb(33, 37, 41);
             }
 
-            // Status cell overrides row color
             var statusCell = row.Cells["Status"];
             statusCell.Style.BackColor = f.IsUsed
                 ? Color.FromArgb(140, 200, 140)
@@ -408,12 +696,24 @@ public class SchemaExplorerForm : Form
 
     private void UpdateCountLabel(int visibleCount, string? statusFilter)
     {
-        var text = $"{visibleCount} campo(s) exibido(s) de {_allFields.Count} total";
-        if (string.IsNullOrEmpty(statusFilter) || statusFilter == "(todos)")
+        string text;
+        if (!_isCustomOptions)
         {
-            var emUso = _allFields.Count(f => f.IsUsed);
-            var nulos = _allFields.Count(f => f.IsNonScalar);
-            text += $"  •  {emUso} em uso  •  {nulos} null (obj)";
+            text = $"{visibleCount} campo(s) exibido(s) de {_extractedCount} total";
+            if (string.IsNullOrEmpty(statusFilter) || statusFilter == "(todos)")
+            {
+                var emUso = _allFields.Count(f => f.IsUsed);
+                var nulos = _allFields.Count(f => f.IsNonScalar);
+                text += $"  •  {emUso} em uso  •  {nulos} null (obj)";
+            }
+        }
+        else if (_totalSemFiltro > 0)
+        {
+            text = $"{visibleCount} campo(s) exibido(s) de {_extractedCount} extraídos ({_totalSemFiltro} no schema completo)";
+        }
+        else
+        {
+            text = $"{visibleCount} campo(s) exibido(s) de {_extractedCount} extraídos (filtros avançados ativos)";
         }
         _statusLabel.Text = text;
     }
@@ -442,7 +742,7 @@ public class SchemaExplorerForm : Form
     private void Grid_ColumnHeaderMouseClick(object? sender, DataGridViewCellMouseEventArgs e)
     {
         var colName = _grid.Columns[e.ColumnIndex].Name;
-        if (colName == "Status") return; // SortMode=Automatic — DataGridView ordena diretamente
+        if (colName == "Status") return;
 
         if (_sortColumn == colName)
             _sortAscending = !_sortAscending;
@@ -505,7 +805,7 @@ public class SchemaExplorerForm : Form
     private static void ExportarCsv(List<SchemaField> fields, string filePath)
     {
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Entidade;Campo;Tipo;Caminho completo;Usado em");
+        sb.AppendLine("Entidade;Campo;Tipo;É Objeto?;Caminho completo;Usado em");
 
         foreach (var f in fields)
         {
@@ -514,11 +814,11 @@ public class SchemaExplorerForm : Form
                 Csv(f.EntityAlias),
                 Csv(f.FieldName),
                 Csv(f.DisplayType),
+                Csv(f.IsNonScalar ? "Sim" : "Não"),
                 Csv(f.FullPath),
                 Csv(usedIn)));
         }
 
-        // UTF-8 com BOM para Excel pt-BR abrir sem "Importar dados"
         File.WriteAllText(filePath, sb.ToString(),
             new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
     }

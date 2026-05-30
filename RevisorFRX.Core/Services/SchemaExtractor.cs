@@ -5,8 +5,9 @@ namespace RevisorFRX.Core.Services;
 
 public static class SchemaExtractor
 {
-    public static List<SchemaField> Extract(XDocument doc)
+    public static List<SchemaField> Extract(XDocument doc, SchemaExtractorOptions? options = null)
     {
+        options ??= SchemaExtractorOptions.Default;
         var fields = new List<SchemaField>();
 
         var dictionary = doc.Descendants()
@@ -14,14 +15,15 @@ public static class SchemaExtractor
         if (dictionary == null) return fields;
 
         foreach (var topSource in dictionary.Elements())
-            ExtractRecursive(topSource, "", rootLevel: true, fields);
+            ExtractRecursive(topSource, "", rootLevel: true, fields, options);
 
         EnrichWithUsage(doc, fields);
         return fields;
     }
 
     private static void ExtractRecursive(
-        XElement element, string entityPath, bool rootLevel, List<SchemaField> fields)
+        XElement element, string entityPath, bool rootLevel, List<SchemaField> fields,
+        SchemaExtractorOptions options)
     {
         // Mirrors SchemaBuilder: prefer Alias, fallback to Name
         var alias = element.Attribute("Alias")?.Value;
@@ -31,19 +33,22 @@ public static class SchemaExtractor
 
         if (element.Name.LocalName == "Column")
         {
-            var dataType = element.Attribute("DataType")?.Value ?? "";
-            fields.Add(new SchemaField
+            var columnPath = string.IsNullOrEmpty(entityPath) ? alias : $"{entityPath}.{alias}";
+            if (!DeveFiltrar(columnPath, options))
             {
-                EntityAlias = entityPath,
-                FieldName = alias,
-                DataType = dataType,
-                UsedInComponents = []
-            });
+                var dataType = element.Attribute("DataType")?.Value ?? "";
+                fields.Add(new SchemaField
+                {
+                    EntityAlias = entityPath,
+                    FieldName = alias,
+                    DataType = dataType,
+                    UsedInComponents = []
+                });
+            }
             // Mirrors SchemaBuilder: continue into children so nested columns
             // (e.g. Column DataType="null" with sub-columns) are also extracted.
-            var childPath = string.IsNullOrEmpty(entityPath) ? alias : $"{entityPath}.{alias}";
             foreach (var child in element.Elements())
-                ExtractRecursive(child, childPath, rootLevel: false, fields);
+                ExtractRecursive(child, columnPath, rootLevel: false, fields, options);
             return;
         }
 
@@ -53,7 +58,30 @@ public static class SchemaExtractor
             : string.IsNullOrEmpty(entityPath) ? alias : $"{entityPath}.{alias}";
 
         foreach (var child in element.Elements())
-            ExtractRecursive(child, newPath, rootLevel: false, fields);
+            ExtractRecursive(child, newPath, rootLevel: false, fields, options);
+    }
+
+    private static bool DeveFiltrar(string entityPath, SchemaExtractorOptions options)
+    {
+        // Filtro 1: profundidade
+        // "A" = 1, "A.B" = 2, "A.B.C" = 3, "A.B.C.D" = 4
+        if (options.MaxDepth < int.MaxValue)
+        {
+            var profundidade = entityPath.Count(c => c == '.') + 1;
+            if (profundidade > options.MaxDepth)
+                return true;
+        }
+
+        // Filtro 2: segmentos excluídos — verifica segmento exato, não substring
+        // "ValidationResult" NÃO filtra "ValidationResultCode"
+        var partes = entityPath.Split('.');
+        foreach (var segmento in options.ExcludedSegments)
+        {
+            if (partes.Any(p => p.Equals(segmento, StringComparison.OrdinalIgnoreCase)))
+                return true;
+        }
+
+        return false;
     }
 
     private static void EnrichWithUsage(XDocument doc, List<SchemaField> fields)
@@ -80,7 +108,7 @@ public static class SchemaExtractor
                 var from = 0;
                 while (from < text.Length)
                 {
-                    var pos = text.IndexOf(pattern, from, StringComparison.OrdinalIgnoreCase);
+                    var pos = text.IndexOf(pattern, from, StringComparison.Ordinal);
                     if (pos < 0) break;
 
                     var end = pos + pattern.Length;
