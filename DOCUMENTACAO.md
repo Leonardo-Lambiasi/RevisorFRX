@@ -486,31 +486,39 @@ omite esse atributo no XML quando o padrão `dd/MM/yyyy` está em uso.
 ### Fix-1 — Valor fixo no layout
 
 **Desabilitada por padrão.** Ative em ⚙ quando necessário.
+Configurável via `hard1-config.json` na pasta do executável.
 
 ```
 1. Para cada TextObject:
    a. Se Text contém [Dados. → skip (expressão do schema)
-   b. Se Text está na whitelist → skip
+   b. Se Text contém qualquer item da whitelist → skip
    c. Aplica detectores habilitados em Fix1Config:
-      CNPJ: \d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}
-      CPF:  \b\d{3}\.\d{3}\.\d{3}-\d{2}\b
-      CEP:  \bCEP\s*:?\s*\d{5}-\d{3}\b  (exige label CEP)
+      CNPJ:     \d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}
+      CPF:      \b\d{3}\.\d{3}\.\d{3}-\d{2}\b
+      CEP:      \bCEP\s*:?\s*\d{5}-\d{3}\b  (exige label "CEP:")
       Telefone: \(\d{2}\)\s*\d{4,5}-\d{4}
-      Data literal: \b\d{2}/\d{2}/\d{4}\b + sem '[' no Text
+      Data:     \b\d{2}/\d{2}/\d{4}\b + sem '[' no Text
       Valor R$: R\$\s*\d+ + Text.Length <= 120
-      Ordinal cartório: \d+[oºª°]\s+(Tabelionato|Cartório|...)
-        palavras configuráveis em hard1-config.json
-      Agência: \bAg[eê]ncia\s+\d+\b
+      Ordinal:  \d+[oOºª°]\s+(Tabelionato|Cartório|...)
+                palavras configuráveis em PalavrasServentia
+      Agência:  \bAg[eê]ncia\s+\d+\b
 2. Para cada PictureObject:
    Se Image preenchido E DataColumn vazio
-   E sem AfterDataEvent → Warning (imagem embutida)
+   E sem AfterDataEvent → Warning (imagem embutida em base64)
 ```
 
-**Configuração:** `hard1-config.json` na pasta do executável. Carregado por `Fix1Config.Carregar(path)` — silencioso em qualquer falha (arquivo ausente, JSON inválido), usa defaults.
+**Regex de ordinal:** compilado sob demanda e cacheado por instância de
+`Fix1Rule`. Recompila apenas se `PalavrasServentia` mudar entre chamadas.
 
-**Regex de ordinal:** compilado sob demanda e cacheado por instância de `Fix1Rule`. Recompila apenas se `PalavrasServentia` mudar entre chamadas — eficiente em batch.
+**Configuração (`hard1-config.json`):**
+- `deteccao`: liga/desliga cada detector individualmente
+- `palavras_serventia`: lista extensível de tipos de serventia
+- `whitelist_textos`: textos que nunca devem ser flagados
+  (padrão: "Certifico e dou fé", "1º Via", "2º Via"...)
+- Se o arquivo não existir: usa defaults silenciosamente, sem erro
 
-**Limite conhecido:** texto livre sem padrão estrutural (nomes de tabelião, endereço sem CEP, nome de município) não é detectado — requer lista de termos curados.
+**Limite conhecido:** texto livre sem padrão estrutural (nome de tabelião,
+endereço sem CEP, nome de município) não é detectado — requer lista curada.
 
 ---
 
@@ -565,58 +573,10 @@ public class SchemaField
 
 ---
 
-## Como publicar
+## Bugs corrigidos
 
-### Opção 1 — Pasta completa (recomendado para distribuição)
-
-```bash
-dotnet publish RevisorFRX.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false
-```
-
-Gera em `RevisorFRX.App/bin/Release/net8.0-windows/win-x64/publish/` uma pasta
-com `RevisorFRX.exe` + todas as DLLs necessárias. Copie a pasta inteira para o
-computador destino. Não precisa de .NET instalado.
-
-### Opção 2 — Arquivo único (portátil, mais lento ao abrir)
-
-```bash
-dotnet publish RevisorFRX.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
-```
-
-Gera um único `RevisorFRX.exe`. Na primeira execução, descompacta os arquivos
-em uma pasta temporária — isso causa lentidão inicial de alguns segundos.
-
-### Compilar no Linux/macOS para Windows
-
-```bash
-# Adicionar no RevisorFRX.App/RevisorFRX.App.csproj (já configurado):
-# <EnableWindowsTargeting>true</EnableWindowsTargeting>
-
-dotnet publish RevisorFRX.App -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false
-```
-
-O binário gerado roda no Windows mesmo sendo compilado em outro sistema.
-
-### Verificar antes de publicar
-
-```bash
-dotnet build RevisorFRX.sln   # deve terminar com 0 erros e 0 avisos
-```
-
----
-
-## Como testar regras manualmente
-
-O projeto `RevisorFRX.TestRunner` (não incluído na solução principal) permite
-rodar análise diretamente no terminal:
-
-```bash
-cd RevisorFRX.TestRunner
-dotnet run
-```
-
-Para adicionar um caso de teste: edite o arquivo
-`ArquivoFRXTeste/teste_completo.frx` injetando os atributos/código desejados.
+> O histórico completo de bugs corrigidos (changelog) foi movido para o
+> `README.md`, seção **"Bugs corrigidos"**.
 
 ---
 

@@ -124,6 +124,29 @@ A tela de ajuda contém documentação interativa com 4 abas:
 
 ### Fix-1 — Configuração de detectores
 
+**Desabilitada por padrão.** Ative em ⚙ quando necessário.
+
+Regra detecta valores fixos no layout que deveriam vir do schema:
+
+```
+1. Para cada TextObject:
+   a. Se Text contém [Dados. → skip (expressão do schema)
+   b. Se Text está na whitelist → skip
+   c. Aplica detectores habilitados em Fix1Config:
+      CNPJ: \d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}
+      CPF:  \b\d{3}\.\d{3}\.\d{3}-\d{2}\b
+      CEP:  \bCEP\s*:?\s*\d{5}-\d{3}\b  (exige label CEP)
+      Telefone: \(\d{2}\)\s*\d{4,5}-\d{4}
+      Data literal: \b\d{2}/\d{2}/\d{4}\b + sem '[' no Text
+      Valor R$: R\$\s*\d+ + Text.Length <= 120
+      Ordinal cartório: \d+[oºª°]\s+(Tabelionato|Cartório|...)
+        palavras configuráveis em hard1-config.json
+      Agência: \bAg[eê]ncia\s+\d+\b
+2. Para cada PictureObject:
+   Se Image preenchido E DataColumn vazio
+   E sem AfterDataEvent → Warning (imagem embutida)
+```
+
 A regra Fix-1 é configurável via arquivo `hard1-config.json` na mesma pasta do executável. Para editar: abra `⚙`, selecione Fix-1 na lista e clique em `[✏ Fix-1...]`.
 
 O arquivo permite:
@@ -131,7 +154,11 @@ O arquivo permite:
 - Personalizar palavras de serventia para o detector de ordinal (padrão: Tabelionato, Cartório, Ofício, Registro, TPSP...)
 - Adicionar textos à whitelist para evitar falsos positivos (padrão: "Certifico e dou fé", "1º Via", "2º Via"...)
 
-Se o arquivo não existir, a regra usa os valores padrão automaticamente — sem erro.
+**Configuração:** `hard1-config.json` na pasta do executável. Carregado por `Fix1Config.Carregar(path)` — silencioso em qualquer falha (arquivo ausente, JSON inválido), usa defaults.
+
+**Regex de ordinal:** compilado sob demanda e cacheado por instância de `Fix1Rule`. Recompila apenas se `PalavrasServentia` mudar entre chamadas — eficiente em batch.
+
+**Limite conhecido:** texto livre sem padrão estrutural (nomes de tabelião, endereço sem CEP, nome de município) não é detectado — requer lista de termos curados.
 
 ---
 
